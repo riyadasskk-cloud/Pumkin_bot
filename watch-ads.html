@@ -9,13 +9,22 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
-        .countdown-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:none; justify-content:center; align-items:center; flex-direction:column; z-index:1000; }
+        .countdown-overlay { 
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.95); display:none; justify-content:center; 
+            align-items:center; flex-direction:column; z-index:1000; 
+        }
         .countdown-number { font-size:80px; font-weight:bold; color:#FF9800; }
     </style>
 </head>
 <body>
     <div id="countdownOverlay" class="countdown-overlay">
-        <div class="text-center"><i class="fas fa-hourglass-half text-white text-5xl mb-4"></i><div id="countdownNumber" class="countdown-number">10</div><p class="text-white">এড দেখুন... ১০ সেকেন্ড অপেক্ষা করুন</p><p class="text-gray-400 text-sm mt-2">এড উইন্ডো বন্ধ করবেন না</p></div>
+        <div class="text-center">
+            <i class="fas fa-hourglass-half text-white text-5xl mb-4"></i>
+            <div id="countdownNumber" class="countdown-number">10</div>
+            <p class="text-white">এড দেখুন... ১০ সেকেন্ড অপেক্ষা করুন</p>
+            <p class="text-gray-400 text-sm mt-2">এড উইন্ডো বন্ধ করবেন না</p>
+        </div>
     </div>
 
     <div class="container mx-auto px-4 py-6">
@@ -25,17 +34,25 @@
         </div>
 
         <div class="pumpkin-card text-center mb-6">
-            <div class="text-5xl font-bold text-orange-600 mb-2"><span id="adsCounter">0</span>/10</div>
-            <div class="progress-bar mb-4"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+            <div class="text-5xl font-bold text-orange-600 mb-2">
+                <span id="adsCounter">0</span>/10
+            </div>
+            <div class="progress-bar mb-4">
+                <div class="progress-fill" id="progressFill" style="width:0%"></div>
+            </div>
             <p class="text-gray-600">আজকের এড দেখা বাকি: <span id="remainingAds">10</span> টি</p>
             <p class="text-green-600 font-bold mt-2">প্রতি এডে ৩০ টাকা</p>
         </div>
 
         <div class="pumpkin-card text-center">
-            <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-ad text-orange-500 text-3xl"></i></div>
+            <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-ad text-orange-500 text-3xl"></i>
+            </div>
             <h3 class="text-xl font-bold mb-2">রিওয়ার্ডেড এড</h3>
             <p class="text-green-600 font-bold text-2xl mb-4">৩০ টাকা</p>
-            <button onclick="watchAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-green-500 to-green-600">🎬 এড দেখুন</button>
+            <button onclick="watchAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-green-500 to-green-600">
+                🎬 এড দেখুন
+            </button>
             <p class="text-xs text-gray-500 mt-4">⚠️ এড দেখার পর ১০ সেকেন্ড এই পেজে থাকুন</p>
         </div>
 
@@ -50,32 +67,89 @@
     </div>
 
     <script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
-<script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="app.js"></script>
+    
     <script>
         let countdownInterval;
         let adWindow = null;
+        let isProcessing = false;
 
-        async function watchAd() {
+        // Load current user data and update UI
+        async function loadAndUpdateUI() {
             const user = await getCurrentUser();
-            if (!user) { alert('ডেটা লোড হয়নি! রিফ্রেশ করুন।'); return; }
-            if (user.today_ads >= 10) { alert('❌ আজকের এড লিমিট শেষ! কাল আবার চেষ্টা করুন।'); return; }
+            if (user) {
+                document.getElementById('adsCounter').textContent = user.today_ads || 0;
+                const remaining = 10 - (user.today_ads || 0);
+                document.getElementById('remainingAds').textContent = remaining;
+                const progress = ((user.today_ads || 0) / 10) * 100;
+                document.getElementById('progressFill').style.width = `${progress}%`;
+                
+                // Disable button if limit reached
+                const watchBtn = document.getElementById('watchBtn');
+                if (user.today_ads >= 10) {
+                    watchBtn.disabled = true;
+                    watchBtn.innerHTML = '❌ আজকের লিমিট শেষ';
+                    watchBtn.classList.add('bg-gray-400');
+                    watchBtn.classList.remove('from-green-500', 'to-green-600');
+                } else {
+                    watchBtn.disabled = false;
+                    watchBtn.innerHTML = '🎬 এড দেখুন';
+                    watchBtn.classList.remove('bg-gray-400');
+                    watchBtn.classList.add('bg-gradient-to-r', 'from-green-500', 'to-green-600');
+                }
+            }
+        }
+
+        // Watch Ad Function
+        async function watchAd() {
+            if (isProcessing) {
+                console.log('Already processing an ad');
+                return;
+            }
             
-            document.getElementById('watchBtn').disabled = true;
-            document.getElementById('watchBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> এড খোলা হচ্ছে...';
+            const user = await getCurrentUser();
+            if (!user) {
+                alert('ডেটা লোড হয়নি! পেজ রিফ্রেশ করুন।');
+                return;
+            }
             
-            const randomLink = CONFIG.AD_LINKS[Math.floor(Math.random() * CONFIG.AD_LINKS.length)];
+            // Check if user can watch more ads
+            if (user.today_ads >= 10) {
+                alert('❌ আজকের এড লিমিট শেষ! কাল আবার চেষ্টা করুন।');
+                return;
+            }
             
+            isProcessing = true;
+            const watchBtn = document.getElementById('watchBtn');
+            watchBtn.disabled = true;
+            watchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> এড খোলা হচ্ছে...';
+            
+            // Select random ad link
+            const randomLink = window.CONFIG.AD_LINKS[Math.floor(Math.random() * window.CONFIG.AD_LINKS.length)];
+            console.log('Opening ad:', randomLink);
+            
+            // Open ad in new tab
             adWindow = window.open(randomLink, '_blank');
-            if (!adWindow) { alert('⚠️ পপআপ ব্লকার বন্ধ করুন!'); resetBtn(); return; }
             
+            if (!adWindow) {
+                alert('⚠️ পপআপ ব্লকার বন্ধ করুন! দয়া করে পপআপ অন করুন।');
+                resetButton();
+                isProcessing = false;
+                return;
+            }
+            
+            // Show countdown overlay
             document.getElementById('countdownOverlay').style.display = 'flex';
             let seconds = 10;
             const countEl = document.getElementById('countdownNumber');
+            countEl.textContent = seconds;
+            
             countdownInterval = setInterval(() => {
                 seconds--;
                 countEl.textContent = seconds;
+                
                 if (seconds <= 0) {
                     clearInterval(countdownInterval);
                     finishAd();
@@ -83,24 +157,123 @@
             }, 1000);
         }
 
+        // Finish watching ad and give reward
         async function finishAd() {
-            document.getElementById('countdownOverlay').style.display = 'none';
-            if (adWindow && !adWindow.closed) adWindow.close();
+            console.log('Finishing ad, giving reward...');
             
-            const result = await addEarning(30);
-            if (result.success) {
-                alert('✅ ৩০ টাকা আপনার অ্যাকাউন্টে যোগ হয়েছে!');
-                location.reload();
-            } else {
+            // Hide overlay
+            document.getElementById('countdownOverlay').style.display = 'none';
+            
+            // Try to close ad window
+            try {
+                if (adWindow && !adWindow.closed) {
+                    adWindow.close();
+                }
+            } catch (error) {
+                console.log('Could not close ad window:', error);
+            }
+            
+            // Get current user again to ensure latest data
+            const user = await getCurrentUser();
+            if (!user) {
+                console.error('No user found');
+                alert('Error: User not found. Please refresh the page.');
+                resetButton();
+                isProcessing = false;
+                return;
+            }
+            
+            // Check again if user can watch (in case of double click)
+            if (user.today_ads >= 10) {
+                alert('❌ আজকের এড লিমিট শেষ!');
+                resetButton();
+                isProcessing = false;
+                return;
+            }
+            
+            // Calculate new values
+            const newTodayAds = (user.today_ads || 0) + 1;
+            const newBalance = (user.balance || 0) + 30;
+            const newTotalIncome = (user.total_income || 0) + 30;
+            const newTotalAds = (user.total_ads || 0) + 1;
+            
+            console.log('Updating user data:', {
+                oldTodayAds: user.today_ads,
+                newTodayAds,
+                oldBalance: user.balance,
+                newBalance,
+                oldTotalIncome: user.total_income,
+                newTotalIncome,
+                oldTotalAds: user.total_ads,
+                newTotalAds
+            });
+            
+            // Update in Supabase
+            const { data, error } = await supabase
+                .from('users')
+                .update({
+                    today_ads: newTodayAds,
+                    balance: newBalance,
+                    total_income: newTotalIncome,
+                    total_ads: newTotalAds,
+                    last_active: new Date().toISOString()
+                })
+                .eq('id', user.id)
+                .select();
+            
+            if (error) {
+                console.error('Supabase update error:', error);
                 alert('❌ সমস্যা হয়েছে! আবার চেষ্টা করুন।');
-                resetBtn();
+                resetButton();
+                isProcessing = false;
+                return;
+            }
+            
+            console.log('Update successful:', data);
+            
+            // Reload user data
+            await loadUser();
+            
+            // Update UI
+            await loadAndUpdateUI();
+            
+            // Show success message
+            alert('✅ ৩০ টাকা আপনার অ্যাকাউন্টে যোগ হয়েছে!\n\nআজকে দেখা এড: ' + newTodayAds + '/10');
+            
+            // Reset button state
+            resetButton();
+            isProcessing = false;
+            
+            // Check if limit reached after update
+            if (newTodayAds >= 10) {
+                const watchBtn = document.getElementById('watchBtn');
+                watchBtn.disabled = true;
+                watchBtn.innerHTML = '❌ আজকের লিমিট শেষ';
+                watchBtn.classList.add('bg-gray-400');
+                watchBtn.classList.remove('from-green-500', 'to-green-600');
             }
         }
 
-        function resetBtn() {
-            document.getElementById('watchBtn').disabled = false;
-            document.getElementById('watchBtn').innerHTML = '🎬 এড দেখুন';
+        function resetButton() {
+            const watchBtn = document.getElementById('watchBtn');
+            watchBtn.disabled = false;
+            watchBtn.innerHTML = '🎬 এড দেখুন';
         }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Wait for app.js to load
+            setTimeout(async () => {
+                await loadAndUpdateUI();
+            }, 500);
+        });
+        
+        // Also update when page becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                loadAndUpdateUI();
+            }
+        });
     </script>
 </body>
 </html>

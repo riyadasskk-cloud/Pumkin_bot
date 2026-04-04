@@ -8,8 +8,24 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        .countdown-overlay { 
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.95); display:none; justify-content:center; 
+            align-items:center; flex-direction:column; z-index:1000; 
+        }
+        .countdown-number { font-size:80px; font-weight:bold; color:#FF9800; }
+    </style>
 </head>
 <body>
+    <div id="countdownOverlay" class="countdown-overlay">
+        <div class="text-center">
+            <i class="fas fa-hourglass-half text-white text-5xl mb-4"></i>
+            <div id="countdownNumber" class="countdown-number">10</div>
+            <p class="text-white">বোনাস এড দেখুন... ১০ সেকেন্ড অপেক্ষা করুন</p>
+        </div>
+    </div>
+
     <div class="container mx-auto px-4 py-6">
         <div class="pumpkin-header mb-6 text-center bg-gradient-to-r from-yellow-500 to-orange-500">
             <h1 class="text-2xl font-bold">⭐ বোনাস এড</h1>
@@ -17,8 +33,12 @@
         </div>
 
         <div class="pumpkin-card text-center mb-6">
-            <div class="text-5xl font-bold text-yellow-600 mb-2"><span id="bonusCounter">0</span>/10</div>
-            <div class="progress-bar mb-4"><div class="progress-fill" id="bonusProgressFill" style="width:0%"></div></div>
+            <div class="text-5xl font-bold text-yellow-600 mb-2">
+                <span id="bonusCounter">0</span>/10
+            </div>
+            <div class="progress-bar mb-4">
+                <div class="progress-fill" id="bonusProgressFill" style="width:0%"></div>
+            </div>
             <p class="text-gray-600">আজকে <span id="bonusToday">0</span> টি বোনাস এড দেখেছেন</p>
         </div>
 
@@ -26,7 +46,9 @@
             <i class="fas fa-star text-yellow-500 text-5xl mb-4"></i>
             <h3 class="text-xl font-bold mb-2">বোনাস এড</h3>
             <p class="text-green-600 font-bold text-2xl mb-4">১০ টাকা</p>
-            <button onclick="watchBonusAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-yellow-500 to-orange-500">⭐ বোনাস এড দেখুন</button>
+            <button onclick="watchBonusAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-yellow-500 to-orange-500">
+                ⭐ বোনাস এড দেখুন
+            </button>
         </div>
 
         <a href="tasks.html" class="block text-center text-gray-500 mt-6">← টাস্ক পেজে ফিরুন</a>
@@ -40,35 +62,118 @@
     </div>
 
     <script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
-<script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="app.js"></script>
+    
     <script>
+        let countdownInterval;
+        let isProcessing = false;
+
+        async function loadBonusUI() {
+            const user = await getCurrentUser();
+            if (user) {
+                document.getElementById('bonusCounter').textContent = user.today_bonus_ads || 0;
+                document.getElementById('bonusToday').textContent = user.today_bonus_ads || 0;
+                const progress = ((user.today_bonus_ads || 0) / 10) * 100;
+                document.getElementById('bonusProgressFill').style.width = `${progress}%`;
+                
+                const watchBtn = document.getElementById('watchBtn');
+                if (user.today_bonus_ads >= 10) {
+                    watchBtn.disabled = true;
+                    watchBtn.innerHTML = '❌ আজকের লিমিট শেষ';
+                    watchBtn.classList.add('bg-gray-400');
+                }
+            }
+        }
+
         async function watchBonusAd() {
+            if (isProcessing) return;
+            
             const user = await getCurrentUser();
             if (!user) return;
-            if (user.today_bonus_ads >= 10) { alert('❌ আজকের বোনাস এড লিমিট শেষ!'); return; }
+            if (user.today_bonus_ads >= 10) {
+                alert('❌ আজকের বোনাস এড লিমিট শেষ!');
+                return;
+            }
             
-            document.getElementById('watchBtn').disabled = true;
-            document.getElementById('watchBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> খোলা হচ্ছে...';
+            isProcessing = true;
+            const watchBtn = document.getElementById('watchBtn');
+            watchBtn.disabled = true;
+            watchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> খোলা হচ্ছে...';
             
-            const links = CONFIG.AD_LINKS;
-            window.open(links[Math.floor(Math.random() * links.length)], '_blank');
+            const randomLink = window.CONFIG.AD_LINKS[Math.floor(Math.random() * window.CONFIG.AD_LINKS.length)];
+            window.open(randomLink, '_blank');
             
-            alert('🎬 এড খোলা হয়েছে! ১০ সেকেন্ড পর টাকা পাবেন।');
+            document.getElementById('countdownOverlay').style.display = 'flex';
+            let seconds = 10;
+            const countEl = document.getElementById('countdownNumber');
+            countEl.textContent = seconds;
             
-            setTimeout(async () => {
-                const result = await addBonusEarning(10);
-                if (result.success) {
-                    alert('✅ ১০ টাকা বোনাস যোগ হয়েছে!');
-                    location.reload();
-                } else {
-                    alert('❌ সমস্যা হয়েছে!');
-                    document.getElementById('watchBtn').disabled = false;
-                    document.getElementById('watchBtn').innerHTML = '⭐ বোনাস এড দেখুন';
+            countdownInterval = setInterval(() => {
+                seconds--;
+                countEl.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(countdownInterval);
+                    finishBonusAd();
                 }
-            }, 10000);
+            }, 1000);
         }
+
+        async function finishBonusAd() {
+            document.getElementById('countdownOverlay').style.display = 'none';
+            
+            const user = await getCurrentUser();
+            if (!user) {
+                alert('Error!');
+                resetBonusButton();
+                isProcessing = false;
+                return;
+            }
+            
+            if (user.today_bonus_ads >= 10) {
+                alert('লিমিট শেষ!');
+                resetBonusButton();
+                isProcessing = false;
+                return;
+            }
+            
+            const newBonusAds = (user.today_bonus_ads || 0) + 1;
+            const newBalance = (user.balance || 0) + 10;
+            const newTotalIncome = (user.total_income || 0) + 10;
+            
+            const { error } = await supabase
+                .from('users')
+                .update({
+                    today_bonus_ads: newBonusAds,
+                    balance: newBalance,
+                    total_income: newTotalIncome,
+                    last_active: new Date().toISOString()
+                })
+                .eq('id', user.id);
+            
+            if (error) {
+                console.error('Update error:', error);
+                alert('❌ সমস্যা হয়েছে!');
+            } else {
+                await loadUser();
+                await loadBonusUI();
+                alert('✅ ১০ টাকা বোনাস যোগ হয়েছে!');
+            }
+            
+            resetBonusButton();
+            isProcessing = false;
+        }
+
+        function resetBonusButton() {
+            const watchBtn = document.getElementById('watchBtn');
+            watchBtn.disabled = false;
+            watchBtn.innerHTML = '⭐ বোনাস এড দেখুন';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            setTimeout(loadBonusUI, 500);
+        });
     </script>
 </body>
 </html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বোনাস এড - মিষ্টি কুমড়া বট</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container mx-auto px-4 py-6">
+        <div class="pumpkin-header mb-6 text-center bg-gradient-to-r from-yellow-500 to-orange-500">
+            <h1 class="text-2xl font-bold">⭐ বোনাস এড</h1>
+            <p class="text-white/80">প্রতি এডে ১০ টাকা</p>
+        </div>
+
+        <div class="pumpkin-card text-center mb-6">
+            <div class="text-5xl font-bold text-yellow-600 mb-2"><span id="bonusCounter">0</span>/10</div>
+            <div class="progress-bar mb-4"><div class="progress-fill" id="bonusProgressFill" style="width:0%"></div></div>
+            <p class="text-gray-600">আজকে <span id="bonusToday">0</span> টি বোনাস এড দেখেছেন</p>
+        </div>
+
+        <div class="pumpkin-card text-center">
+            <i class="fas fa-star text-yellow-500 text-5xl mb-4"></i>
+            <h3 class="text-xl font-bold mb-2">বোনাস এড</h3>
+            <p class="text-green-600 font-bold text-2xl mb-4">১০ টাকা</p>
+            <button onclick="watchBonusAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-yellow-500 to-orange-500">⭐ বোনাস এড দেখুন</button>
+        </div>
+
+        <a href="tasks.html" class="block text-center text-gray-500 mt-6">← টাস্ক পেজে ফিরুন</a>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>হোম</span></a>
+        <a href="tasks.html" class="nav-item active"><i class="fas fa-tasks"></i><span>টাস্ক</span></a>
+        <a href="withdraw.html" class="nav-item"><i class="fas fa-wallet"></i><span>উইথড্র</span></a>
+        <a href="profile.html" class="nav-item"><i class="fas fa-user"></i><span>প্রোফাইল</span></a>
+    </div>
+
+    <script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="app.js"></script>
+    <script>
+        async function watchBonusAd() {
+            const user = await getCurrentUser();
+            if (!user) return;
+            if (user.today_bonus_ads >= 10) { alert('❌ আজকের বোনাস এড লিমিট শেষ!'); return; }
+            
+            document.getElementById('watchBtn').disabled = true;
+            document.getElementById('watchBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> খোলা হচ্ছে...';
+            
+            const links = CONFIG.AD_LINKS;
+            window.open(links[Math.floor(Math.random() * links.length)], '_blank');
+            
+            alert('🎬 এড খোলা হয়েছে! ১০ সেকেন্ড পর টাকা পাবেন।');
+            
+            setTimeout(async () => {
+                const result = await addBonusEarning(10);
+                if (result.success) {
+                    alert('✅ ১০ টাকা বোনাস যোগ হয়েছে!');
+                    location.reload();
+                } else {
+                    alert('❌ সমস্যা হয়েছে!');
+                    document.getElementById('watchBtn').disabled = false;
+                    document.getElementById('watchBtn').innerHTML = '⭐ বোনাস এড দেখুন';
+                }
+            }, 10000);
+        }
+    </script>
+</body>
+</html>

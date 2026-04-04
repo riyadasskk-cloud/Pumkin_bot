@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>এড দেখুন - মিষ্টি কুমড়া বট</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .countdown-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:none; justify-content:center; align-items:center; flex-direction:column; z-index:1000; }
+        .countdown-number { font-size:80px; font-weight:bold; color:#FF9800; }
+    </style>
+</head>
+<body>
+    <div id="countdownOverlay" class="countdown-overlay">
+        <div class="text-center"><i class="fas fa-hourglass-half text-white text-5xl mb-4"></i><div id="countdownNumber" class="countdown-number">10</div><p class="text-white">এড দেখুন... ১০ সেকেন্ড অপেক্ষা করুন</p><p class="text-gray-400 text-sm mt-2">এড উইন্ডো বন্ধ করবেন না</p></div>
+    </div>
+
+    <div class="container mx-auto px-4 py-6">
+        <div class="pumpkin-header mb-6 text-center">
+            <h1 class="text-2xl font-bold">📺 এড দেখুন</h1>
+            <p class="text-white/80">প্রতি এডে ৩০ টাকা</p>
+        </div>
+
+        <div class="pumpkin-card text-center mb-6">
+            <div class="text-5xl font-bold text-orange-600 mb-2"><span id="adsCounter">0</span>/10</div>
+            <div class="progress-bar mb-4"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+            <p class="text-gray-600">আজকের এড দেখা বাকি: <span id="remainingAds">10</span> টি</p>
+            <p class="text-green-600 font-bold mt-2">প্রতি এডে ৩০ টাকা</p>
+        </div>
+
+        <div class="pumpkin-card text-center">
+            <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-ad text-orange-500 text-3xl"></i></div>
+            <h3 class="text-xl font-bold mb-2">রিওয়ার্ডেড এড</h3>
+            <p class="text-green-600 font-bold text-2xl mb-4">৩০ টাকা</p>
+            <button onclick="watchAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-green-500 to-green-600">🎬 এড দেখুন</button>
+            <p class="text-xs text-gray-500 mt-4">⚠️ এড দেখার পর ১০ সেকেন্ড এই পেজে থাকুন</p>
+        </div>
+
+        <a href="tasks.html" class="block text-center text-gray-500 mt-6">← টাস্ক পেজে ফিরুন</a>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>হোম</span></a>
+        <a href="tasks.html" class="nav-item active"><i class="fas fa-tasks"></i><span>টাস্ক</span></a>
+        <a href="withdraw.html" class="nav-item"><i class="fas fa-wallet"></i><span>উইথড্র</span></a>
+        <a href="profile.html" class="nav-item"><i class="fas fa-user"></i><span>প্রোফাইল</span></a>
+    </div>
+
+    <script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="app.js"></script>
+    <script>
+        let countdownInterval;
+        let adWindow = null;
+
+        async function watchAd() {
+            const user = await getCurrentUser();
+            if (!user) { alert('ডেটা লোড হয়নি! রিফ্রেশ করুন।'); return; }
+            if (user.today_ads >= 10) { alert('❌ আজকের এড লিমিট শেষ! কাল আবার চেষ্টা করুন।'); return; }
+            
+            document.getElementById('watchBtn').disabled = true;
+            document.getElementById('watchBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> এড খোলা হচ্ছে...';
+            
+            const randomLink = CONFIG.AD_LINKS[Math.floor(Math.random() * CONFIG.AD_LINKS.length)];
+            
+            adWindow = window.open(randomLink, '_blank');
+            if (!adWindow) { alert('⚠️ পপআপ ব্লকার বন্ধ করুন!'); resetBtn(); return; }
+            
+            document.getElementById('countdownOverlay').style.display = 'flex';
+            let seconds = 10;
+            const countEl = document.getElementById('countdownNumber');
+            countdownInterval = setInterval(() => {
+                seconds--;
+                countEl.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(countdownInterval);
+                    finishAd();
+                }
+            }, 1000);
+        }
+
+        async function finishAd() {
+            document.getElementById('countdownOverlay').style.display = 'none';
+            if (adWindow && !adWindow.closed) adWindow.close();
+            
+            const result = await addEarning(30);
+            if (result.success) {
+                alert('✅ ৩০ টাকা আপনার অ্যাকাউন্টে যোগ হয়েছে!');
+                location.reload();
+            } else {
+                alert('❌ সমস্যা হয়েছে! আবার চেষ্টা করুন।');
+                resetBtn();
+            }
+        }
+
+        function resetBtn() {
+            document.getElementById('watchBtn').disabled = false;
+            document.getElementById('watchBtn').innerHTML = '🎬 এড দেখুন';
+        }
+    </script>
+</body>
+</html>

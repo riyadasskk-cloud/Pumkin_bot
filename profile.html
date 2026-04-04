@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>প্রোফাইল - মিষ্টি কুমড়া বট</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container mx-auto px-4 py-6">
+        <div class="pumpkin-header mb-6 text-center">
+            <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-user text-3xl text-white"></i></div>
+            <h2 class="text-xl font-bold" id="profileName">ইউজার</h2>
+            <p class="text-white/80 text-sm" id="userId">আইডি: লোডিং...</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="pumpkin-card text-center"><i class="fas fa-wallet text-green-500 text-2xl mb-2"></i><p class="text-sm">মোট আয়</p><h3 class="font-bold text-lg" id="totalIncome">0</h3></div>
+            <div class="pumpkin-card text-center"><i class="fas fa-eye text-blue-500 text-2xl mb-2"></i><p class="text-sm">মোট এড</p><h3 class="font-bold text-lg" id="totalAds">0</h3></div>
+            <div class="pumpkin-card text-center"><i class="fas fa-users text-purple-500 text-2xl mb-2"></i><p class="text-sm">রেফারেল</p><h3 class="font-bold text-lg" id="totalReferrals">0</h3></div>
+            <div class="pumpkin-card text-center"><i class="fas fa-calendar text-orange-500 text-2xl mb-2"></i><p class="text-sm">জয়েন তারিখ</p><h3 class="font-bold text-sm" id="joinDate">-</h3></div>
+        </div>
+
+        <div class="pumpkin-card">
+            <h3 class="font-bold mb-4">⚙️ সেটিংস</h3>
+            <button onclick="copyReferralLink()" class="w-full flex items-center justify-between p-3 border rounded-xl mb-2 hover:bg-gray-50"><span><i class="fas fa-link mr-2 text-purple-500"></i>রেফারেল লিঙ্ক কপি</span><i class="fas fa-copy text-gray-400"></i></button>
+            <button onclick="logout()" class="w-full flex items-center justify-between p-3 border rounded-xl text-red-600 hover:bg-red-50"><span><i class="fas fa-sign-out-alt mr-2"></i>লগ আউট</span><i class="fas fa-arrow-right"></i></button>
+        </div>
+
+        <div class="pumpkin-card mt-6">
+            <h3 class="font-bold mb-3">👥 আপনার রেফারেল লিঙ্ক</h3>
+            <div class="bg-gray-100 rounded-lg p-3 break-all"><code class="text-xs" id="profileReferralLink">লোড হচ্ছে...</code></div>
+            <button onclick="copyReferralLink()" class="mt-3 pumpkin-btn w-full text-sm py-2">📋 কপি লিঙ্ক</button>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>হোম</span></a>
+        <a href="tasks.html" class="nav-item"><i class="fas fa-tasks"></i><span>টাস্ক</span></a>
+        <a href="withdraw.html" class="nav-item"><i class="fas fa-wallet"></i><span>উইথড্র</span></a>
+        <a href="profile.html" class="nav-item active"><i class="fas fa-user"></i><span>প্রোফাইল</span></a>
+    </div>
+
+    <script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="app.js"></script>
+    <script>
+        function logout() {
+            if (confirm('লগ আউট করতে চান?')) {
+                localStorage.clear();
+                window.location.href = 'index.html';
+            }
+        }
+    </script>
+</body>
+</html>

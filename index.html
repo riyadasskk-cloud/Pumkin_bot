@@ -28,18 +28,44 @@
         </div>
 
         <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="pumpkin-card text-center"><i class="fas fa-eye text-orange-500 text-2xl mb-2"></i><p class="text-sm">আজকের এড</p><h3 class="font-bold text-xl" id="todayAds">0/10</h3></div>
-            <div class="pumpkin-card text-center"><i class="fas fa-users text-orange-500 text-2xl mb-2"></i><p class="text-sm">রেফারেল</p><h3 class="font-bold text-xl" id="totalReferrals">0</h3></div>
-            <div class="pumpkin-card text-center"><i class="fas fa-chart-line text-orange-500 text-2xl mb-2"></i><p class="text-sm">মোট এড</p><h3 class="font-bold text-xl" id="totalAds">0</h3></div>
-            <div class="pumpkin-card text-center"><i class="fas fa-wallet text-orange-500 text-2xl mb-2"></i><p class="text-sm">মোট আয়</p><h3 class="font-bold text-xl" id="totalIncome">0</h3></div>
+            <div class="pumpkin-card text-center">
+                <i class="fas fa-eye text-orange-500 text-2xl mb-2"></i>
+                <p class="text-sm">এই ঘন্টায় এড</p>
+                <h3 class="font-bold text-xl" id="todayAds">0/10</h3>
+                <p class="text-xs text-gray-400 mt-1" id="resetTimer">রিসেট: --</p>
+            </div>
+            <div class="pumpkin-card text-center">
+                <i class="fas fa-users text-orange-500 text-2xl mb-2"></i>
+                <p class="text-sm">রেফারেল</p>
+                <h3 class="font-bold text-xl" id="totalReferrals">0</h3>
+            </div>
+            <div class="pumpkin-card text-center">
+                <i class="fas fa-chart-line text-orange-500 text-2xl mb-2"></i>
+                <p class="text-sm">মোট এড</p>
+                <h3 class="font-bold text-xl" id="totalAds">0</h3>
+            </div>
+            <div class="pumpkin-card text-center">
+                <i class="fas fa-wallet text-orange-500 text-2xl mb-2"></i>
+                <p class="text-sm">মোট আয়</p>
+                <h3 class="font-bold text-xl" id="totalIncome">0</h3>
+            </div>
         </div>
 
         <div class="pumpkin-card mb-6">
             <h3 class="font-bold text-lg mb-4">📋 দ্রুত কাজ</h3>
             <div class="space-y-3">
-                <a href="tasks.html" class="flex items-center justify-between p-3 bg-orange-50 rounded-xl"><div class="flex items-center"><i class="fas fa-tasks text-orange-500 mr-3"></i><span>টাস্ক করুন</span></div><i class="fas fa-chevron-right"></i></a>
-                <a href="withdraw.html" class="flex items-center justify-between p-3 bg-green-50 rounded-xl"><div class="flex items-center"><i class="fas fa-hand-holding-usd text-green-500 mr-3"></i><span>টাকা উত্তোলন</span></div><i class="fas fa-chevron-right"></i></a>
-                <button onclick="copyReferralLink()" class="flex items-center justify-between p-3 bg-purple-50 rounded-xl w-full"><div class="flex items-center"><i class="fas fa-link text-purple-500 mr-3"></i><span>রেফারেল লিঙ্ক কপি</span></div><i class="fas fa-copy"></i></button>
+                <a href="tasks.html" class="flex items-center justify-between p-3 bg-orange-50 rounded-xl">
+                    <div class="flex items-center"><i class="fas fa-tasks text-orange-500 mr-3"></i><span>টাস্ক করুন</span></div>
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                <a href="withdraw.html" class="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+                    <div class="flex items-center"><i class="fas fa-hand-holding-usd text-green-500 mr-3"></i><span>টাকা উত্তোলন</span></div>
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                <button onclick="copyReferralLink()" class="flex items-center justify-between p-3 bg-purple-50 rounded-xl w-full">
+                    <div class="flex items-center"><i class="fas fa-link text-purple-500 mr-3"></i><span>রেফারেল লিঙ্ক কপি</span></div>
+                    <i class="fas fa-copy"></i>
+                </button>
             </div>
         </div>
 
@@ -59,8 +85,78 @@
     </div>
 
     <script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
-<script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="app.js"></script>
+    
+    <script>
+        // ============================================
+        // HOURLY RESET FUNCTIONS (Same as watch-ads.html)
+        // ============================================
+        
+        function checkHourlyReset() {
+            const currentHour = new Date().getHours();
+            const lastResetHour = localStorage.getItem('last_ad_reset_hour');
+            
+            if (lastResetHour !== null && parseInt(lastResetHour) !== currentHour) {
+                console.log('Hourly reset triggered for MAIN ADS on homepage!');
+                localStorage.setItem('hourly_ads_watched', '0');
+                localStorage.setItem('last_ad_reset_hour', currentHour.toString());
+                return true;
+            }
+            
+            if (lastResetHour === null) {
+                localStorage.setItem('last_ad_reset_hour', currentHour.toString());
+                localStorage.setItem('hourly_ads_watched', '0');
+            }
+            return false;
+        }
+
+        function getHourlyAdsCount() {
+            checkHourlyReset();
+            return parseInt(localStorage.getItem('hourly_ads_watched') || '0');
+        }
+
+        function getTimeUntilNextHour() {
+            const now = new Date();
+            const nextHour = new Date(now);
+            nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+            const diffMs = nextHour - now;
+            const minutes = Math.floor(diffMs / (1000 * 60));
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            
+            if (hours > 0) {
+                return `${hours}ঘ ${mins}মি`;
+            }
+            return `${minutes} মিনিট`;
+        }
+
+        function updateHomepageUI() {
+            // Get hourly count from localStorage
+            const hourlyCount = getHourlyAdsCount();
+            const timeLeft = getTimeUntilNextHour();
+            
+            // Update today ads section with hourly data
+            document.getElementById('todayAds').textContent = `${hourlyCount}/10`;
+            document.getElementById('resetTimer').textContent = `রিসেট: ${timeLeft}`;
+            
+            // These come from app.js (database)
+            // totalReferrals, totalAds, totalIncome, mainBalance, userName are handled by app.js updateUI()
+        }
+
+        // Override the app.js updateUI to also show hourly data
+        const originalUpdateUI = window.updateUI;
+        
+        // Call both original and our hourly update
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Wait for app.js to load
+            setTimeout(() => {
+                updateHomepageUI();
+                // Update every minute
+                setInterval(updateHomepageUI, 60000);
+            }, 1000);
+        });
+    </script>
 </body>
 </html>

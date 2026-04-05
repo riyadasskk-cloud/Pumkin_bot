@@ -15,6 +15,18 @@
             align-items:center; flex-direction:column; z-index:1000; 
         }
         .countdown-number { font-size:80px; font-weight:bold; color:#FF9800; }
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            z-index: 1001;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -25,11 +37,12 @@
             <p class="text-white">বোনাস এড দেখুন... ১০ সেকেন্ড অপেক্ষা করুন</p>
         </div>
     </div>
+    <div id="toast" class="toast"></div>
 
     <div class="container mx-auto px-4 py-6">
         <div class="pumpkin-header mb-6 text-center bg-gradient-to-r from-yellow-500 to-orange-500">
             <h1 class="text-2xl font-bold">⭐ বোনাস এড</h1>
-            <p class="text-white/80">প্রতি এডে ১০ টাকা</p>
+            <p class="text-white/80">প্রতি এডে ১০ টাকা | রিসেট: প্রতি ঘন্টায়</p>
         </div>
 
         <div class="pumpkin-card text-center mb-6">
@@ -39,18 +52,16 @@
             <div class="progress-bar mb-4">
                 <div class="progress-fill" id="bonusProgressFill" style="width:0%"></div>
             </div>
-            <p class="text-gray-600">আজকে <span id="bonusToday">0</span> টি বোনাস এড দেখেছেন</p>
+            <p class="text-gray-600">এই ঘন্টায় দেখেছেন: <span id="bonusToday">0</span> টি বোনাস এড</p>
+            <p class="text-green-600 font-bold mt-2">প্রতি বোনাস এডে ১০ টাকা</p>
+            <p class="text-xs text-orange-600 font-bold mt-1" id="hourlyResetTimer">পরবর্তী রিসেট: গণনা করা হচ্ছে...</p>
         </div>
 
         <div class="pumpkin-card text-center">
-            <i class="fas fa-star text-yellow-500 text-5xl mb-4"></i>
-            <h3 class="text-xl font-bold mb-2">বোনাস এড</h3>
-            <p class="text-green-600 font-bold text-2xl mb-4">১০ টাকা</p>
-            <button onclick="watchBonusAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-yellow-500 to-orange-500">
+            <button onclick="watchBonusAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-yellow-500 to-orange-500 w-full py-4 text-lg">
                 ⭐ বোনাস এড দেখুন
             </button>
         </div>
-
         <a href="tasks.html" class="block text-center text-gray-500 mt-6">← টাস্ক পেজে ফিরুন</a>
     </div>
 
@@ -63,37 +74,118 @@
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-client.js"></script>
-    <script src="app.js"></script>
-    
     <script>
-        let countdownInterval;
+        const supabase = supabase.createClient(window.CONFIG.SUPABASE_URL, window.CONFIG.SUPABASE_ANON_KEY);
+        let currentUser = null;
+        let countdownInterval = null;
         let isProcessing = false;
 
-        async function loadBonusUI() {
-            const user = await getCurrentUser();
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.backgroundColor = isError ? '#dc2626' : '#22c55e';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        // Check and reset hourly using localStorage for bonus ads
+        function checkHourlyBonusReset() {
+            const currentHour = new Date().getHours();
+            const lastResetHour = localStorage.getItem('last_bonus_reset_hour');
+            
+            if (lastResetHour !== null && parseInt(lastResetHour) !== currentHour) {
+                console.log('Hourly reset for BONUS ADS!');
+                localStorage.setItem('hourly_bonus_ads_watched', '0');
+                localStorage.setItem('last_bonus_reset_hour', currentHour.toString());
+                return true;
+            }
+            
+            if (lastResetHour === null) {
+                localStorage.setItem('last_bonus_reset_hour', currentHour.toString());
+                localStorage.setItem('hourly_bonus_ads_watched', '0');
+            }
+            
+            return false;
+        }
+
+        function getHourlyBonusCount() {
+            checkHourlyBonusReset();
+            return parseInt(localStorage.getItem('hourly_bonus_ads_watched') || '0');
+        }
+
+        function incrementHourlyBonusCount() {
+            const current = getHourlyBonusCount();
+            const newCount = current + 1;
+            localStorage.setItem('hourly_bonus_ads_watched', newCount.toString());
+            return newCount;
+        }
+
+        function getTimeUntilNextHour() {
+            const now = new Date();
+            const nextHour = new Date(now);
+            nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+            const diffMs = nextHour - now;
+            const minutes = Math.floor(diffMs / (1000 * 60));
+            return `${minutes} মিনিট`;
+        }
+
+        async function getOrCreateUser() {
+            const tg = window.Telegram?.WebApp;
+            let userId = tg?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('temp_user_id');
+            if (!userId) {
+                userId = 'web_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+                localStorage.setItem('temp_user_id', userId);
+            }
+            const firstName = tg?.initDataUnsafe?.user?.first_name || 'ইউজার';
+            
+            let { data: user, error } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+            const now = new Date();
+            
             if (user) {
-                document.getElementById('bonusCounter').textContent = user.today_bonus_ads || 0;
-                document.getElementById('bonusToday').textContent = user.today_bonus_ads || 0;
-                const progress = ((user.today_bonus_ads || 0) / 10) * 100;
-                document.getElementById('bonusProgressFill').style.width = `${progress}%`;
-                
-                const watchBtn = document.getElementById('watchBtn');
-                if (user.today_bonus_ads >= 10) {
-                    watchBtn.disabled = true;
-                    watchBtn.innerHTML = '❌ আজকের লিমিট শেষ';
-                    watchBtn.classList.add('bg-gray-400');
-                }
+                currentUser = user;
+            } else {
+                const newUser = {
+                    id: userId, first_name: firstName, balance: 50, today_ads: 0, total_ads: 0,
+                    today_bonus_ads: 0, today_bonus_ads_2: 0, total_referrals: 0, total_income: 50,
+                    join_date: now.toISOString(), last_active: now.toISOString()
+                };
+                const { data: created } = await supabase.from('users').insert(newUser).select().single();
+                currentUser = created;
+            }
+            updateBonusUI();
+            return currentUser;
+        }
+
+        function updateBonusUI() {
+            if (!currentUser) return;
+            
+            const hourlyCount = getHourlyBonusCount();
+            document.getElementById('bonusCounter').textContent = `${hourlyCount}/10`;
+            document.getElementById('bonusToday').textContent = hourlyCount;
+            document.getElementById('bonusProgressFill').style.width = `${(hourlyCount / 10) * 100}%`;
+            document.getElementById('hourlyResetTimer').textContent = `পরবর্তী রিসেট: ${getTimeUntilNextHour()}`;
+            
+            const watchBtn = document.getElementById('watchBtn');
+            if (hourlyCount >= 10) {
+                watchBtn.disabled = true;
+                watchBtn.innerHTML = '❌ এই ঘন্টায় লিমিট শেষ';
+                watchBtn.classList.add('bg-gray-400');
+                watchBtn.classList.remove('from-yellow-500', 'to-orange-500');
+            } else {
+                watchBtn.disabled = false;
+                watchBtn.innerHTML = '⭐ বোনাস এড দেখুন';
+                watchBtn.classList.remove('bg-gray-400');
+                watchBtn.classList.add('bg-gradient-to-r', 'from-yellow-500', 'to-orange-500');
             }
         }
 
         async function watchBonusAd() {
             if (isProcessing) return;
+            if (!currentUser) await getOrCreateUser();
             
-            const user = await getCurrentUser();
-            if (!user) return;
-            if (user.today_bonus_ads >= 10) {
-                alert('❌ আজকের বোনাস এড লিমিট শেষ!');
+            const hourlyCount = getHourlyBonusCount();
+            if (hourlyCount >= 10) {
+                showToast(`এই ঘন্টায় বোনাস এড লিমিট শেষ! ${getTimeUntilNextHour()} পর আবার চেষ্টা করুন।`, true);
                 return;
             }
             
@@ -107,73 +199,52 @@
             
             document.getElementById('countdownOverlay').style.display = 'flex';
             let seconds = 10;
-            const countEl = document.getElementById('countdownNumber');
-            countEl.textContent = seconds;
-            
+            document.getElementById('countdownNumber').textContent = seconds;
             countdownInterval = setInterval(() => {
                 seconds--;
-                countEl.textContent = seconds;
-                if (seconds <= 0) {
-                    clearInterval(countdownInterval);
-                    finishBonusAd();
-                }
+                document.getElementById('countdownNumber').textContent = seconds;
+                if (seconds <= 0) { clearInterval(countdownInterval); finishBonusAd(); }
             }, 1000);
         }
 
         async function finishBonusAd() {
             document.getElementById('countdownOverlay').style.display = 'none';
             
-            const user = await getCurrentUser();
-            if (!user) {
-                alert('Error!');
-                resetBonusButton();
-                isProcessing = false;
-                return;
-            }
+            const newHourlyCount = incrementHourlyBonusCount();
+            const newBalance = (currentUser.balance || 0) + 10;
+            const newTotalIncome = (currentUser.total_income || 0) + 10;
             
-            if (user.today_bonus_ads >= 10) {
-                alert('লিমিট শেষ!');
-                resetBonusButton();
-                isProcessing = false;
-                return;
-            }
+            const { error } = await supabase.from('users').update({
+                balance: newBalance,
+                total_income: newTotalIncome,
+                last_active: new Date().toISOString()
+            }).eq('id', currentUser.id);
             
-            const newBonusAds = (user.today_bonus_ads || 0) + 1;
-            const newBalance = (user.balance || 0) + 10;
-            const newTotalIncome = (user.total_income || 0) + 10;
-            
-            const { error } = await supabase
-                .from('users')
-                .update({
-                    today_bonus_ads: newBonusAds,
-                    balance: newBalance,
-                    total_income: newTotalIncome,
-                    last_active: new Date().toISOString()
-                })
-                .eq('id', user.id);
-            
-            if (error) {
-                console.error('Update error:', error);
-                alert('❌ সমস্যা হয়েছে!');
+            if (error) { 
+                showToast('সমস্যা হয়েছে!', true); 
             } else {
-                await loadUser();
-                await loadBonusUI();
-                alert('✅ ১০ টাকা বোনাস যোগ হয়েছে!');
+                const { data: fresh } = await supabase.from('users').select('*').eq('id', currentUser.id).single();
+                currentUser = fresh;
+                updateBonusUI();
+                showToast(`✅ ১০ টাকা বোনাস যোগ হয়েছে! এই ঘন্টায় ${newHourlyCount}/10`, false);
             }
             
-            resetBonusButton();
             isProcessing = false;
-        }
-
-        function resetBonusButton() {
-            const watchBtn = document.getElementById('watchBtn');
-            watchBtn.disabled = false;
-            watchBtn.innerHTML = '⭐ বোনাস এড দেখুন';
+            if (getHourlyBonusCount() < 10) {
+                document.getElementById('watchBtn').disabled = false;
+                document.getElementById('watchBtn').innerHTML = '⭐ বোনাস এড দেখুন';
+            }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            setTimeout(loadBonusUI, 500);
+            if (window.Telegram?.WebApp) { window.Telegram.WebApp.expand(); window.Telegram.WebApp.ready(); }
+            await getOrCreateUser();
+            setInterval(() => { 
+                checkHourlyBonusReset();
+                updateBonusUI(); 
+            }, 60000);
         });
+        window.watchBonusAd = watchBonusAd;
     </script>
 </body>
 </html>

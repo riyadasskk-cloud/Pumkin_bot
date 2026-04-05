@@ -10,8 +10,11 @@ window.CONFIG = {
         'https://ferocitysuperintend.com/wzvdzr4ka?key=7a422407e8fedbc108da1c1da906f0a9',
         'https://otieu.com/4/9809044',
         'https://otieu.com/4/10095617',
+        'https://techbazar55.netlify.app/',
         'https://otieu.com/4/9345167',
-        'https://otieu.com/4/9569635'
+        'https://otieu.com/4/9569635',
+        'https://techbazar55.netlify.app/',
+        'https://techbazar55.netlify.app/'
     ],
     
     // App Settings

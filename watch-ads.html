@@ -15,6 +15,18 @@
             align-items:center; flex-direction:column; z-index:1000; 
         }
         .countdown-number { font-size:80px; font-weight:bold; color:#FF9800; }
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            z-index: 1001;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -26,6 +38,7 @@
             <p class="text-gray-400 text-sm mt-2">এড দেখার পর এই পেজে ফিরে আসুন</p>
         </div>
     </div>
+    <div id="toast" class="toast"></div>
 
     <div class="container mx-auto px-4 py-6">
         <div class="pumpkin-header mb-6 text-center">
@@ -46,9 +59,10 @@
         </div>
 
         <div class="pumpkin-card text-center">
-            <button onclick="watchAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-green-500 to-green-600">
+            <button onclick="watchAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-green-500 to-green-600 w-full py-4 text-lg">
                 🎬 এড দেখুন
             </button>
+            <p class="text-xs text-gray-500 mt-3">⚠️ পপআপ ব্লকার বন্ধ রাখুন | এড দেখার পর ১০ সেকেন্ড অপেক্ষা করুন</p>
         </div>
 
         <a href="tasks.html" class="block text-center text-gray-500 mt-6">← টাস্ক পেজে ফিরুন</a>
@@ -70,6 +84,14 @@
         let countdownInterval;
         let adWindow = null;
         let adOpened = false;
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.backgroundColor = isError ? '#dc2626' : '#22c55e';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
 
         // Check and reset hourly using localStorage
         function checkHourlyReset() {
@@ -108,6 +130,12 @@
             nextHour.setHours(now.getHours() + 1, 0, 0, 0);
             const diffMs = nextHour - now;
             const minutes = Math.floor(diffMs / (1000 * 60));
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            
+            if (hours > 0) {
+                return `${hours}ঘ ${mins}মি`;
+            }
             return `${minutes} মিনিট`;
         }
 
@@ -124,10 +152,12 @@
                 watchBtn.disabled = true;
                 watchBtn.innerHTML = '❌ এই ঘন্টায় লিমিট শেষ';
                 watchBtn.classList.add('bg-gray-400');
+                watchBtn.classList.remove('from-green-500', 'to-green-600');
             } else {
                 watchBtn.disabled = false;
                 watchBtn.innerHTML = '🎬 এড দেখুন';
                 watchBtn.classList.remove('bg-gray-400');
+                watchBtn.classList.add('bg-gradient-to-r', 'from-green-500', 'to-green-600');
             }
         }
 
@@ -145,7 +175,7 @@
             }
             
             if (adOpened) {
-                alert('এড ইতিমধ্যে খোলা আছে!');
+                alert('এড ইতিমধ্যে খোলা আছে! দয়া করে আগের এডটি সম্পন্ন করুন।');
                 return;
             }
             
@@ -154,6 +184,7 @@
             watchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> এড খোলা হচ্ছে...';
             
             const randomLink = window.CONFIG.AD_LINKS[Math.floor(Math.random() * window.CONFIG.AD_LINKS.length)];
+            console.log('Opening ad:', randomLink);
             
             adWindow = window.open(randomLink, '_blank');
             adOpened = true;
@@ -185,13 +216,13 @@
             document.getElementById('countdownOverlay').style.display = 'none';
             
             // DO NOT CLOSE THE AD WINDOW - Let user close it naturally
+            // This was the issue - the ad was closing by itself
             
             // Increment hourly count in localStorage
             const newHourlyCount = incrementHourlyAdsCount();
             
-            // Update Supabase - Update today_ads, balance, total_ads, total_income
+            // Update Supabase - Update balance, total_ads, total_income only
             const user = await getCurrentUser();
-            const newTodayAds = (user.today_ads || 0) + 1;
             const newBalance = (user.balance || 0) + 30;
             const newTotalIncome = (user.total_income || 0) + 30;
             const newTotalAds = (user.total_ads || 0) + 1;
@@ -199,7 +230,6 @@
             const { error } = await supabase
                 .from('users')
                 .update({
-                    today_ads: newTodayAds,
                     balance: newBalance,
                     total_income: newTotalIncome,
                     total_ads: newTotalAds,
@@ -210,12 +240,20 @@
             if (error) {
                 console.error('Update error:', error);
                 alert('❌ সমস্যা হয়েছে! আবার চেষ্টা করুন।');
+                // Revert localStorage increment
+                localStorage.setItem('hourly_ads_watched', (newHourlyCount - 1).toString());
             } else {
                 // Refresh user data in app.js
                 await loadUser();
-                alert(`✅ ৩০ টাকা যোগ হয়েছে! এই ঘন্টায় ${newHourlyCount}/10`);
-                // Reload to update all pages
-                location.reload();
+                showToast(`✅ ৩০ টাকা যোগ হয়েছে! এই ঘন্টায় ${newHourlyCount}/10`, false);
+                
+                // Update UI immediately
+                updateUI();
+                
+                // Show success message
+                setTimeout(() => {
+                    alert(`✅ ৩০ টাকা যোগ হয়েছে!\n\nএই ঘন্টায় আপনি ${newHourlyCount}/10 টি এড দেখেছেন।`);
+                }, 500);
             }
             
             document.getElementById('watchBtn').disabled = false;
@@ -226,6 +264,7 @@
         // Run on page load
         document.addEventListener('DOMContentLoaded', () => {
             updateUI();
+            // Update timer every minute
             setInterval(updateUI, 60000);
         });
     </script>

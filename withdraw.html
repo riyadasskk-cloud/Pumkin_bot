@@ -24,9 +24,24 @@
         <div class="pumpkin-card mb-6">
             <h3 class="font-bold mb-4">📋 উত্তোলনের শর্তাবলী</h3>
             <div class="space-y-3">
-                <div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span>ন্যূনতম উত্তোলন:</span><span class="font-bold text-green-600">৫০০ টাকা</span></div>
-                <div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span>👥 রেফারেল প্রয়োজন:</span><span id="reqReferrals" class="font-bold text-red-500">0/15</span></div>
-                <div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span>📺 মোট এড প্রয়োজন:</span><span id="reqAds" class="font-bold text-red-500">0/10</span></div>
+                <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <span>ন্যূনতম উত্তোলন:</span>
+                    <span class="font-bold text-green-600">৫০০ টাকা</span>
+                </div>
+                <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <span>👥 রেফারেল প্রয়োজন:</span>
+                    <span id="reqReferrals" class="font-bold text-red-500">0/15</span>
+                </div>
+                <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <span>📺 মোট এড প্রয়োজন:</span>
+                    <span id="reqAds" class="font-bold text-red-500">0/50</span>
+                </div>
+            </div>
+            <div class="mt-3 p-2 bg-yellow-50 rounded-lg text-center">
+                <p class="text-xs text-yellow-700">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    উত্তোলনের জন্য কমপক্ষে ৫০টি এড দেখতে হবে
+                </p>
             </div>
         </div>
 
@@ -55,9 +70,10 @@
     </div>
 
     <script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
-<script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="app.js"></script>
+    
     <script>
         async function submitWithdraw() {
             const user = await getCurrentUser();
@@ -67,11 +83,27 @@
             const account = document.getElementById('account').value.trim();
             const method = document.getElementById('method').value;
             
-            if (isNaN(amount) || amount < 500) { alert('⚠️ ন্যূনতম ৫০০ টাকা উত্তোলন করতে হবে!'); return; }
-            if (amount > user.balance) { alert(`⚠️ আপনার ব্যালেন্স: ${user.balance} টাকা`); return; }
-            if ((user.total_referrals || 0) < 15) { alert(`⚠️ রেফারেল প্রয়োজন: ${user.total_referrals || 0}/15 জন`); return; }
-            if ((user.total_ads || 0) < 10) { alert(`⚠️ এড প্রয়োজন: ${user.total_ads || 0}/10 টি`); return; }
-            if (!account.match(/^01[0-9]{9}$/)) { alert('⚠️ সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)'); return; }
+            if (isNaN(amount) || amount < 500) { 
+                alert('⚠️ ন্যূনতম ৫০০ টাকা উত্তোলন করতে হবে!'); 
+                return; 
+            }
+            if (amount > user.balance) { 
+                alert(`⚠️ আপনার ব্যালেন্স: ${user.balance} টাকা`); 
+                return; 
+            }
+            if ((user.total_referrals || 0) < 15) { 
+                alert(`⚠️ রেফারেল প্রয়োজন: ${user.total_referrals || 0}/15 জন`); 
+                return; 
+            }
+            // CHANGED: 10 ads to 50 ads
+            if ((user.total_ads || 0) < 50) { 
+                alert(`⚠️ এড প্রয়োজন: ${user.total_ads || 0}/50 টি (উত্তোলনের জন্য ৫০টি এড দেখতে হবে)`); 
+                return; 
+            }
+            if (!account.match(/^01[0-9]{9}$/)) { 
+                alert('⚠️ সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)'); 
+                return; 
+            }
             
             if (!confirm(`${amount} টাকা উত্তোলন করবেন?\n${method.toUpperCase()}: ${account}`)) return;
             
@@ -89,6 +121,29 @@
                 btn.innerHTML = '💸 উত্তোলন করুন';
             }
         }
+
+        function updateRequirements() {
+            const user = getUserData();
+            if (user) {
+                const referrals = user.total_referrals || 0;
+                const ads = user.total_ads || 0;
+                
+                document.getElementById('reqReferrals').textContent = `${referrals}/১৫`;
+                document.getElementById('reqAds').textContent = `${ads}/৫০`;
+                
+                document.getElementById('reqReferrals').className = 
+                    referrals >= 15 ? 'font-bold text-green-600' : 'font-bold text-red-500';
+                document.getElementById('reqAds').className = 
+                    ads >= 50 ? 'font-bold text-green-600' : 'font-bold text-red-500';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                updateRequirements();
+            }, 1000);
+            setInterval(updateRequirements, 30000);
+        });
     </script>
 </body>
 </html>

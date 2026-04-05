@@ -1,4 +1,4 @@
-// app.js - Modified to NOT reset daily counters (hourly reset handled by localStorage)
+// app.js - Complete with Hourly Reset and 50 Ads Withdrawal Requirement
 let currentUser = null;
 
 // Get Telegram User ID
@@ -74,7 +74,7 @@ async function processReferral(userId, userName, userFirstName) {
         }
         
         // Add bonus to NEW USER (50 tk)
-        await supabase
+        const { error: newUserError } = await supabase
             .from('users')
             .update({
                 balance: supabase.rpc('increment', { x: 50 }),
@@ -82,6 +82,23 @@ async function processReferral(userId, userName, userFirstName) {
                 referred_by: referrerId
             })
             .eq('id', userId);
+        
+        if (newUserError) {
+            const { data: currentUserData } = await supabase
+                .from('users')
+                .select('balance, total_income')
+                .eq('id', userId)
+                .single();
+            
+            await supabase
+                .from('users')
+                .update({
+                    balance: (currentUserData?.balance || 50) + 50,
+                    total_income: (currentUserData?.total_income || 50) + 50,
+                    referred_by: referrerId
+                })
+                .eq('id', userId);
+        }
         
         // Add bonus to REFERRER (100 tk)
         const newReferralCount = (referrer.total_referrals || 0) + 1;
@@ -127,7 +144,7 @@ async function processReferral(userId, userName, userFirstName) {
     }
 }
 
-// Load or Create User (NO DAILY RESET - handled by localStorage)
+// Load or Create User (NO DAILY RESET - hourly handled by localStorage)
 async function loadUser() {
     const userId = getTelegramUserId();
     const tg = window.Telegram?.WebApp;
@@ -145,8 +162,7 @@ async function loadUser() {
     const now = new Date();
     
     if (user) {
-        // IMPORTANT: NO DAILY RESET HERE - Hourly reset handled by localStorage in individual pages
-        // Just update last_active
+        // Update last_active only - no daily reset
         await supabase
             .from('users')
             .update({ last_active: now.toISOString() })
@@ -197,7 +213,7 @@ async function loadUser() {
     return currentUser;
 }
 
-// Update UI (only balance and total stats, not daily counters)
+// Update UI (balance, total stats, not daily counters)
 function updateUI() {
     if (!currentUser) return;
     
@@ -212,7 +228,7 @@ function updateUI() {
         'joinDate': new Date(currentUser.join_date).toLocaleDateString('bn'),
         'balance': currentUser.balance?.toFixed(2) + ' টাকা',
         'reqReferrals': `${currentUser.total_referrals || 0}/15`,
-        'reqAds': `${currentUser.total_ads || 0}/10`
+        'reqAds': `${currentUser.total_ads || 0}/50`
     };
     
     for (const [id, value] of Object.entries(elements)) {
@@ -220,8 +236,18 @@ function updateUI() {
         if (el) el.textContent = value;
     }
     
+    // Update profile total income and ads
+    const profileTotalIncome = document.getElementById('profileTotalIncome');
+    if (profileTotalIncome) profileTotalIncome.textContent = (currentUser.total_income || 0).toFixed(2) + ' টাকা';
+    
+    const profileTotalAds = document.getElementById('profileTotalAds');
+    if (profileTotalAds) profileTotalAds.textContent = currentUser.total_ads || 0;
+    
+    const profileReferrals = document.getElementById('profileReferrals');
+    if (profileReferrals) profileReferrals.textContent = currentUser.total_referrals || 0;
+    
     // Referral link
-    const referralLink = `https://t.me/${window.CONFIG.BOT_USERNAME}?startapp=ref${currentUser.id}`;
+    const referralLink = `https://t.me/${window.CONFIG?.BOT_USERNAME || 'mishti_kumra_bot'}?startapp=ref${currentUser.id}`;
     const linkElements = ['referralLink', 'profileReferralLink'];
     linkElements.forEach(id => {
         const el = document.getElementById(id);
@@ -231,6 +257,9 @@ function updateUI() {
     // User ID display
     const userIdEl = document.getElementById('userId');
     if (userIdEl) userIdEl.textContent = `আইডি: ${currentUser.id.substring(0, 10)}...`;
+    
+    const avatarText = document.getElementById('avatarText');
+    if (avatarText) avatarText.textContent = currentUser.first_name ? currentUser.first_name.charAt(0).toUpperCase() : 'U';
     
     // Hide loading
     const loadingOverlay = document.getElementById('loadingOverlay');
@@ -304,7 +333,7 @@ async function addBonusEarning(amount) {
     return { success: false };
 }
 
-// Add general bonus
+// Add general bonus (for tasks)
 async function addBonus(amount) {
     if (!currentUser) return;
     const newBalance = (currentUser.balance || 0) + amount;
@@ -323,19 +352,22 @@ async function addBonus(amount) {
     updateUI();
 }
 
-// Request withdrawal
+// Request withdrawal - UPDATED: 50 ads minimum (was 10)
 async function requestWithdraw(amount, account, method) {
     if (!currentUser) return { success: false, error: 'No user' };
     if (amount > currentUser.balance) return { success: false, error: 'Insufficient balance' };
     if ((currentUser.total_referrals || 0) < 15) return { success: false, error: 'Need 15 referrals' };
-    if ((currentUser.total_ads || 0) < 10) return { success: false, error: 'Need 10 total ads' };
+    // UPDATED: 10 ads to 50 ads requirement
+    if ((currentUser.total_ads || 0) < 50) return { success: false, error: 'Need 50 total ads' };
     
+    // Deduct balance
     const newBalance = currentUser.balance - amount;
     await supabase
         .from('users')
         .update({ balance: newBalance })
         .eq('id', currentUser.id);
     
+    // Create withdrawal request
     const timestamp = Date.now();
     const { error } = await supabase
         .from('withdrawals')
@@ -363,15 +395,41 @@ async function requestWithdraw(amount, account, method) {
 // Copy referral link
 async function copyReferralLink() {
     if (!currentUser) return;
-    const link = `https://t.me/${window.CONFIG.BOT_USERNAME}?startapp=ref${currentUser.id}`;
-    await navigator.clipboard.writeText(link);
-    alert('✅ রেফারেল লিঙ্ক কপি হয়েছে!\n\n' + link);
+    const link = `https://t.me/${window.CONFIG?.BOT_USERNAME || 'mishti_kumra_bot'}?startapp=ref${currentUser.id}`;
+    try {
+        await navigator.clipboard.writeText(link);
+        alert('✅ রেফারেল লিঙ্ক কপি হয়েছে!\n\n' + link);
+    } catch (error) {
+        const textarea = document.createElement('textarea');
+        textarea.value = link;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('✅ রেফারেল লিঙ্ক কপি হয়েছে!\n\n' + link);
+    }
 }
 
 // Get current user
 async function getCurrentUser() {
     if (!currentUser) await loadUser();
     return currentUser;
+}
+
+// Get user data (alias)
+function getUserData() {
+    return currentUser;
+}
+
+// Update all pages UI
+function updateAllPagesUI() {
+    updateUI();
+}
+
+// Hide loading
+function hideLoading() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) loadingOverlay.style.display = 'none';
 }
 
 // Initialize
@@ -383,6 +441,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     await loadUser();
     updateUI();
+    hideLoading();
 });
 
 // Expose functions globally
@@ -393,3 +452,7 @@ window.requestWithdraw = requestWithdraw;
 window.copyReferralLink = copyReferralLink;
 window.getCurrentUser = getCurrentUser;
 window.loadUser = loadUser;
+window.getUserData = getUserData;
+window.updateUI = updateUI;
+window.updateAllPagesUI = updateAllPagesUI;
+window.hideLoading = hideLoading;

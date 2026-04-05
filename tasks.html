@@ -13,7 +13,7 @@
     <div class="container mx-auto px-4 py-6">
         <div class="pumpkin-header mb-6">
             <h1 class="text-2xl font-bold">📋 টাস্ক করুন</h1>
-            <p class="text-white/80 text-sm">এড দেখে আয় করুন</p>
+            <p class="text-white/80 text-sm">এড দেখে আয় করুন | রিসেট: <span id="headerResetTimer">প্রতি ঘন্টায়</span></p>
         </div>
 
         <!-- Main Ads -->
@@ -23,7 +23,10 @@
                 <span class="bg-green-100 text-green-600 px-2 py-1 rounded text-xs">৩০ টাকা/এড</span>
             </div>
             <p class="text-gray-600 text-sm mb-3">প্রতি এড দেখে ৩০ টাকা উপার্জন করুন</p>
-            <div class="flex justify-between text-sm mb-2"><span>আজকে: <span id="todayAdsCount">0</span>/10</span><span id="resetTimer">রিসেট: লোড...</span></div>
+            <div class="flex justify-between text-sm mb-2">
+                <span>এই ঘন্টায়: <span id="todayAdsCount">0</span>/10</span>
+                <span id="resetTimer" class="text-orange-600 font-semibold">রিসেট: লোড হচ্ছে...</span>
+            </div>
             <div class="progress-bar mb-4"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
             <a href="watch-ads.html" class="pumpkin-btn block text-center">🎬 এড দেখুন</a>
         </div>
@@ -35,7 +38,10 @@
                 <span class="bg-green-100 text-green-600 px-2 py-1 rounded text-xs">১০ টাকা/এড</span>
             </div>
             <p class="text-gray-600 text-sm mb-3">বোনাস এড দেখে ১০ টাকা উপার্জন করুন</p>
-            <div class="flex justify-between text-sm mb-2"><span>আজকে: <span id="bonusAdsCount">0</span>/10</span></div>
+            <div class="flex justify-between text-sm mb-2">
+                <span>এই ঘন্টায়: <span id="bonusAdsCount">0</span>/10</span>
+                <span id="bonusResetTimer" class="text-orange-600 font-semibold">রিসেট: লোড হচ্ছে...</span>
+            </div>
             <div class="progress-bar mb-4"><div class="progress-fill" id="bonusProgressFill" style="width:0%"></div></div>
             <a href="bonus-ads.html" class="pumpkin-btn bg-gradient-to-r from-yellow-500 to-orange-500 block text-center">⭐ বোনাস এড দেখুন</a>
         </div>
@@ -69,12 +75,102 @@
     </div>
 
     <script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
-<script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="app.js"></script>
+    
     <script>
+        // ============================================
+        // HOURLY RESET FUNCTIONS (Same as watch-ads.html)
+        // ============================================
+        
+        function checkHourlyReset() {
+            const currentHour = new Date().getHours();
+            const lastResetHour = localStorage.getItem('last_ad_reset_hour');
+            
+            if (lastResetHour !== null && parseInt(lastResetHour) !== currentHour) {
+                console.log('Hourly reset triggered for MAIN ADS in tasks page!');
+                localStorage.setItem('hourly_ads_watched', '0');
+                localStorage.setItem('last_ad_reset_hour', currentHour.toString());
+                return true;
+            }
+            
+            if (lastResetHour === null) {
+                localStorage.setItem('last_ad_reset_hour', currentHour.toString());
+                localStorage.setItem('hourly_ads_watched', '0');
+            }
+            return false;
+        }
+
+        function checkHourlyBonusReset() {
+            const currentHour = new Date().getHours();
+            const lastResetHour = localStorage.getItem('last_bonus_reset_hour');
+            
+            if (lastResetHour !== null && parseInt(lastResetHour) !== currentHour) {
+                console.log('Hourly reset for BONUS ADS in tasks page!');
+                localStorage.setItem('hourly_bonus_ads_watched', '0');
+                localStorage.setItem('last_bonus_reset_hour', currentHour.toString());
+                return true;
+            }
+            
+            if (lastResetHour === null) {
+                localStorage.setItem('last_bonus_reset_hour', currentHour.toString());
+                localStorage.setItem('hourly_bonus_ads_watched', '0');
+            }
+            return false;
+        }
+
+        function getHourlyAdsCount() {
+            checkHourlyReset();
+            return parseInt(localStorage.getItem('hourly_ads_watched') || '0');
+        }
+
+        function getHourlyBonusCount() {
+            checkHourlyBonusReset();
+            return parseInt(localStorage.getItem('hourly_bonus_ads_watched') || '0');
+        }
+
+        function getTimeUntilNextHour() {
+            const now = new Date();
+            const nextHour = new Date(now);
+            nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+            const diffMs = nextHour - now;
+            const minutes = Math.floor(diffMs / (1000 * 60));
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            
+            if (hours > 0) {
+                return `${hours}ঘ ${mins}মি`;
+            }
+            return `${minutes} মিনিট`;
+        }
+
+        function updateTasksUI() {
+            // Get counts from localStorage
+            const adsCount = getHourlyAdsCount();
+            const bonusCount = getHourlyBonusCount();
+            const timeLeft = getTimeUntilNextHour();
+            
+            // Update main ads section
+            document.getElementById('todayAdsCount').textContent = adsCount;
+            document.getElementById('resetTimer').innerHTML = `রিসেট: ${timeLeft}`;
+            document.getElementById('progressFill').style.width = `${(adsCount / 10) * 100}%`;
+            
+            // Update bonus ads section
+            document.getElementById('bonusAdsCount').textContent = bonusCount;
+            document.getElementById('bonusResetTimer').innerHTML = `রিসেট: ${timeLeft}`;
+            document.getElementById('bonusProgressFill').style.width = `${(bonusCount / 10) * 100}%`;
+            
+            // Update header
+            document.getElementById('headerResetTimer').innerHTML = `প্রতি ঘন্টায় (পরবর্তী: ${timeLeft})`;
+        }
+
+        // Telegram Task
         async function completeTelegramTask() {
-            if (localStorage.getItem('task_telegram')) { alert('✅ আপনি আগেই এই টাস্ক সম্পন্ন করেছেন!'); return; }
+            if (localStorage.getItem('task_telegram')) { 
+                alert('✅ আপনি আগেই এই টাস্ক সম্পন্ন করেছেন!'); 
+                return; 
+            }
             window.open('https://t.me/mishti_kumra_official', '_blank');
             await addBonus(50);
             localStorage.setItem('task_telegram', 'done');
@@ -82,8 +178,13 @@
             document.getElementById('telegramBtn').disabled = true;
             alert('🎉 ৫০ টাকা বোনাস আপনার অ্যাকাউন্টে যোগ হয়েছে!');
         }
+
+        // YouTube Task
         async function completeYoutubeTask() {
-            if (localStorage.getItem('task_youtube')) { alert('✅ আপনি আগেই এই টাস্ক সম্পন্ন করেছেন!'); return; }
+            if (localStorage.getItem('task_youtube')) { 
+                alert('✅ আপনি আগেই এই টাস্ক সম্পন্ন করেছেন!'); 
+                return; 
+            }
             window.open('https://youtube.com/@mishtikumra', '_blank');
             await addBonus(50);
             localStorage.setItem('task_youtube', 'done');
@@ -91,6 +192,41 @@
             document.getElementById('youtubeBtn').disabled = true;
             alert('🎉 ৫০ টাকা বোনাস আপনার অ্যাকাউন্টে যোগ হয়েছে!');
         }
+
+        // Also update from database today_ads (for homepage sync)
+        async function syncFromDatabase() {
+            const user = await getCurrentUser();
+            if (user) {
+                // Don't override hourly count, just update UI if needed
+                const hourlyCount = getHourlyAdsCount();
+                if (hourlyCount !== user.today_ads && user.today_ads > hourlyCount) {
+                    // If database has higher count, sync to localStorage
+                    localStorage.setItem('hourly_ads_watched', user.today_ads.toString());
+                    updateTasksUI();
+                }
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateTasksUI();
+            syncFromDatabase();
+            
+            // Update every minute
+            setInterval(() => {
+                updateTasksUI();
+            }, 60000);
+            
+            // Check task completion status
+            if (localStorage.getItem('task_telegram')) {
+                document.getElementById('telegramBtn').innerHTML = '✅ সম্পন্ন';
+                document.getElementById('telegramBtn').disabled = true;
+            }
+            if (localStorage.getItem('task_youtube')) {
+                document.getElementById('youtubeBtn').innerHTML = '✅ সম্পন্ন';
+                document.getElementById('youtubeBtn').disabled = true;
+            }
+        });
     </script>
 </body>
 </html>

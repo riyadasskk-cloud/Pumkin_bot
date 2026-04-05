@@ -23,6 +23,7 @@
             <i class="fas fa-hourglass-half text-white text-5xl mb-4"></i>
             <div id="countdownNumber" class="countdown-number">10</div>
             <p class="text-white">বোনাস এড দেখুন... ১০ সেকেন্ড অপেক্ষা করুন</p>
+            <p class="text-gray-400 text-sm mt-2">এড দেখার পর এই পেজে ফিরে আসুন</p>
         </div>
     </div>
 
@@ -67,8 +68,8 @@
     
     <script>
         let countdownInterval;
+        let bonusAdOpened = false;
 
-        // Check and reset hourly using localStorage for bonus ads
         function checkHourlyBonusReset() {
             const currentHour = new Date().getHours();
             const lastResetHour = localStorage.getItem('last_bonus_reset_hour');
@@ -110,7 +111,6 @@
 
         function updateBonusUI() {
             const hourlyCount = getHourlyBonusCount();
-            // Fix: Only set the number, not the whole text with /10
             document.getElementById('bonusCounter').textContent = hourlyCount;
             document.getElementById('bonusToday').textContent = hourlyCount;
             document.getElementById('bonusProgressFill').style.width = `${(hourlyCount / 10) * 100}%`;
@@ -121,12 +121,10 @@
                 watchBtn.disabled = true;
                 watchBtn.innerHTML = '❌ এই ঘন্টায় লিমিট শেষ';
                 watchBtn.classList.add('bg-gray-400');
-                watchBtn.classList.remove('from-yellow-500', 'to-orange-500');
             } else {
                 watchBtn.disabled = false;
                 watchBtn.innerHTML = '⭐ বোনাস এড দেখুন';
                 watchBtn.classList.remove('bg-gray-400');
-                watchBtn.classList.add('bg-gradient-to-r', 'from-yellow-500', 'to-orange-500');
             }
         }
 
@@ -140,12 +138,18 @@
                 return;
             }
             
+            if (bonusAdOpened) {
+                alert('এড ইতিমধ্যে খোলা আছে!');
+                return;
+            }
+            
             const watchBtn = document.getElementById('watchBtn');
             watchBtn.disabled = true;
             watchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> খোলা হচ্ছে...';
             
             const randomLink = window.CONFIG.AD_LINKS[Math.floor(Math.random() * window.CONFIG.AD_LINKS.length)];
             window.open(randomLink, '_blank');
+            bonusAdOpened = true;
             
             document.getElementById('countdownOverlay').style.display = 'flex';
             let seconds = 10;
@@ -165,17 +169,19 @@
         async function finishBonusAd() {
             document.getElementById('countdownOverlay').style.display = 'none';
             
-            // Increment hourly count in localStorage
+            // DO NOT CLOSE THE AD WINDOW
+            
             const newHourlyCount = incrementHourlyBonusCount();
             
-            // Update Supabase (balance only)
             const user = await getCurrentUser();
+            const newTodayBonusAds = (user.today_bonus_ads || 0) + 1;
             const newBalance = (user.balance || 0) + 10;
             const newTotalIncome = (user.total_income || 0) + 10;
             
             const { error } = await supabase
                 .from('users')
                 .update({
+                    today_bonus_ads: newTodayBonusAds,
                     balance: newBalance,
                     total_income: newTotalIncome,
                     last_active: new Date().toISOString()
@@ -192,9 +198,9 @@
             
             document.getElementById('watchBtn').disabled = false;
             document.getElementById('watchBtn').innerHTML = '⭐ বোনাস এড দেখুন';
+            bonusAdOpened = false;
         }
 
-        // Run on page load
         document.addEventListener('DOMContentLoaded', () => {
             updateBonusUI();
             setInterval(updateBonusUI, 60000);

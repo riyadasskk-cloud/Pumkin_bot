@@ -23,6 +23,7 @@
             <i class="fas fa-hourglass-half text-white text-5xl mb-4"></i>
             <div id="countdownNumber" class="countdown-number">10</div>
             <p class="text-white">এড দেখুন... ১০ সেকেন্ড অপেক্ষা করুন</p>
+            <p class="text-gray-400 text-sm mt-2">এড দেখার পর এই পেজে ফিরে আসুন</p>
         </div>
     </div>
 
@@ -68,6 +69,7 @@
     <script>
         let countdownInterval;
         let adWindow = null;
+        let adOpened = false;
 
         // Check and reset hourly using localStorage
         function checkHourlyReset() {
@@ -111,7 +113,6 @@
 
         function updateUI() {
             const hourlyCount = getHourlyAdsCount();
-            // Fix: Only set the number, not the whole text with /10
             document.getElementById('adsCounter').textContent = hourlyCount;
             const remaining = 10 - hourlyCount;
             document.getElementById('remainingAds').textContent = remaining;
@@ -123,12 +124,10 @@
                 watchBtn.disabled = true;
                 watchBtn.innerHTML = '❌ এই ঘন্টায় লিমিট শেষ';
                 watchBtn.classList.add('bg-gray-400');
-                watchBtn.classList.remove('from-green-500', 'to-green-600');
             } else {
                 watchBtn.disabled = false;
                 watchBtn.innerHTML = '🎬 এড দেখুন';
                 watchBtn.classList.remove('bg-gray-400');
-                watchBtn.classList.add('bg-gradient-to-r', 'from-green-500', 'to-green-600');
             }
         }
 
@@ -145,6 +144,11 @@
                 return;
             }
             
+            if (adOpened) {
+                alert('এড ইতিমধ্যে খোলা আছে!');
+                return;
+            }
+            
             const watchBtn = document.getElementById('watchBtn');
             watchBtn.disabled = true;
             watchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> এড খোলা হচ্ছে...';
@@ -152,11 +156,13 @@
             const randomLink = window.CONFIG.AD_LINKS[Math.floor(Math.random() * window.CONFIG.AD_LINKS.length)];
             
             adWindow = window.open(randomLink, '_blank');
+            adOpened = true;
             
             if (!adWindow) {
                 alert('পপআপ ব্লকার বন্ধ করুন!');
                 watchBtn.disabled = false;
                 watchBtn.innerHTML = '🎬 এড দেখুন';
+                adOpened = false;
                 return;
             }
             
@@ -178,15 +184,14 @@
         async function finishAd() {
             document.getElementById('countdownOverlay').style.display = 'none';
             
-            if (adWindow && !adWindow.closed) {
-                adWindow.close();
-            }
+            // DO NOT CLOSE THE AD WINDOW - Let user close it naturally
             
             // Increment hourly count in localStorage
             const newHourlyCount = incrementHourlyAdsCount();
             
-            // Update Supabase (balance only)
+            // Update Supabase - Update today_ads, balance, total_ads, total_income
             const user = await getCurrentUser();
+            const newTodayAds = (user.today_ads || 0) + 1;
             const newBalance = (user.balance || 0) + 30;
             const newTotalIncome = (user.total_income || 0) + 30;
             const newTotalAds = (user.total_ads || 0) + 1;
@@ -194,6 +199,7 @@
             const { error } = await supabase
                 .from('users')
                 .update({
+                    today_ads: newTodayAds,
                     balance: newBalance,
                     total_income: newTotalIncome,
                     total_ads: newTotalAds,
@@ -202,22 +208,24 @@
                 .eq('id', user.id);
             
             if (error) {
+                console.error('Update error:', error);
                 alert('❌ সমস্যা হয়েছে! আবার চেষ্টা করুন।');
             } else {
-                // Refresh user data
+                // Refresh user data in app.js
                 await loadUser();
                 alert(`✅ ৩০ টাকা যোগ হয়েছে! এই ঘন্টায় ${newHourlyCount}/10`);
+                // Reload to update all pages
                 location.reload();
             }
             
             document.getElementById('watchBtn').disabled = false;
             document.getElementById('watchBtn').innerHTML = '🎬 এড দেখুন';
+            adOpened = false;
         }
 
         // Run on page load
         document.addEventListener('DOMContentLoaded', () => {
             updateUI();
-            // Update timer every minute
             setInterval(updateUI, 60000);
         });
     </script>

@@ -6,8 +6,6 @@ window.CONFIG = {
     
     // Ad Links
     AD_LINKS: [
-        'https://ferocitysuperintend.com/q3gtdwtif0?key=8fab9c833a59630b50874801fba88f73',
-        'https://ferocitysuperintend.com/wzvdzr4ka?key=7a422407e8fedbc108da1c1da906f0a9',
         'https://otieu.com/4/9809044',
         'https://otieu.com/4/10095617',
         'https://techbazar55.netlify.app/',

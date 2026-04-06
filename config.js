@@ -13,7 +13,9 @@ window.CONFIG = {
         'https://otieu.com/4/9569635',
         'https://techbazar55.netlify.app/',
         'https://concentrationmayberenice.com/img7n81xh8?key=60effca0c228e66afd204784027d8b16',
-        'https://omg10.com/4/9345167'
+        'https://omg10.com/4/9345167',
+        'https://concentrationmayberenice.com/wzvdzr4ka?key=7a422407e8fedbc108da1c1da906f0a9',
+        'https://concentrationmayberenice.com/img7n81xh8?key=60effca0c228e66afd204784027d8b16'
     ],
     
     // App Settings

@@ -1,4 +1,4 @@
-// app.js - Complete with Hourly Reset, 50 Ads Withdrawal Requirement & Push Notifications
+// app.js - Complete with Hourly Reset, 50 Ads Withdrawal Requirement & Auto Push Notifications
 let currentUser = null;
 
 // Get Telegram User ID
@@ -159,7 +159,7 @@ async function processReferral(userId, userName, userFirstName) {
     }
 }
 
-// Load or Create User (NO DAILY RESET - hourly handled by localStorage)
+// Load or Create User with Auto Notification Subscribe
 async function loadUser() {
     const userId = getTelegramUserId();
     const tg = window.Telegram?.WebApp;
@@ -167,6 +167,36 @@ async function loadUser() {
     const username = getTelegramUsername();
     
     console.log('Loading user:', userId);
+    
+    // 🔔 অটোমেটিক নোটিফিকেশন সাবস্ক্রাইব (WebApp থেকে ওপেন করলে)
+    if (tg?.initDataUnsafe?.user?.id) {
+        const telegramUserId = tg.initDataUnsafe.user.id;
+        
+        // চেক করুন ইউজার আগে সাবস্ক্রাইব করেছে কিনা
+        const { data: existingChat } = await supabase
+            .from('user_chat_ids')
+            .select('chat_id')
+            .eq('user_id', userId)
+            .maybeSingle();
+        
+        if (!existingChat) {
+            // ব্যাকগ্রাউন্ডে সেভ করুন (অপেক্ষা না করে)
+            fetch('/api/save-chat-id', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: userId,
+                    telegramUserId: telegramUserId,
+                    firstName: firstName,
+                    username: username
+                })
+            }).then(res => res.json())
+              .then(data => console.log('📱 Auto-subscribed to notifications:', data))
+              .catch(err => console.log('Subscription deferred:', err));
+        } else {
+            console.log('✅ User already subscribed to notifications');
+        }
+    }
     
     let { data: user, error } = await supabase
         .from('users')

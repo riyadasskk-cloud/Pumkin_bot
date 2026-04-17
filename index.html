@@ -8,10 +8,222 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 25px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+            padding: 20px;
+            border-radius: 25px 25px 20px 20px;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .step-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 4px solid #FF9800;
+        }
+        
+        .step-number {
+            background: #FF9800;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .rule-btn {
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 15px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        .rule-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px dashed #FF9800;
+        }
+        
+        .warning-box {
+            background: #FFF3CD;
+            border-radius: 10px;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #FFC107;
+        }
+    </style>
 </head>
 <body>
     <div id="loadingOverlay" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
         <div class="text-center"><div class="spinner"></div><p>🎃 লোড হচ্ছে...</p></div>
+    </div>
+
+    <!-- কাজ করার নিয়ম Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">📚 কাজ করার সম্পূর্ণ নিয়ম</h2>
+                    <button onclick="closeRulesModal()" class="text-white text-2xl">&times;</button>
+                </div>
+                <p class="text-white/80 text-sm mt-1">নতুন ইউজারদের জন্য গাইডলাইন</p>
+            </div>
+            
+            <div class="p-5">
+                <!-- স্বাগতম বার্তা -->
+                <div class="highlight-box text-center">
+                    <i class="fas fa-hand-wave text-3xl text-orange-500 mb-2"></i>
+                    <h3 class="font-bold text-lg">স্বাগতম! 🎉</h3>
+                    <p class="text-sm">আপনি জয়েন করেই পেয়েছেন <span class="font-bold text-green-600">৫০ টাকা বোনাস!</span></p>
+                    <p class="text-xs text-gray-600 mt-1">নিচের নিয়ম অনুসরণ করে প্রতিদিন আয় করুন</p>
+                </div>
+                
+                <!-- Step 1 -->
+                <div class="step-card">
+                    <div class="flex items-center mb-2">
+                        <span class="step-number">1</span>
+                        <h4 class="font-bold">এড দেখুন (প্রধান আয়)</h4>
+                    </div>
+                    <p class="text-sm text-gray-700 mb-2">✅ প্রতি এডে <span class="font-bold text-green-600">৩০ টাকা</span> করে পাবেন</p>
+                    <p class="text-sm text-gray-700 mb-2">✅ প্রতি ঘন্টায় <span class="font-bold">১০টি</span> এড দেখতে পারবেন</p>
+                    <p class="text-sm text-gray-700 mb-2">✅ এড দেখার পর ১০ সেকেন্ড অপেক্ষা করতে হবে</p>
+                    <p class="text-sm text-gray-700">📍 <span class="text-orange-600">টাস্ক → এড দেখুন</span> থেকে এড দেখুন</p>
+                </div>
+                
+                <!-- Step 2 -->
+                <div class="step-card">
+                    <div class="flex items-center mb-2">
+                        <span class="step-number">2</span>
+                        <h4 class="font-bold">বোনাস এড দেখুন</h4>
+                    </div>
+                    <p class="text-sm text-gray-700 mb-2">✅ প্রতি বোনাস এডে <span class="font-bold text-green-600">১০ টাকা</span> করে পাবেন</p>
+                    <p class="text-sm text-gray-700 mb-2">✅ প্রতি ঘন্টায় <span class="font-bold">১০টি</span> বোনাস এড দেখতে পারবেন</p>
+                    <p class="text-sm text-gray-700">📍 <span class="text-orange-600">টাস্ক → বোনাস এড</span> থেকে দেখুন</p>
+                </div>
+                
+                <!-- Step 3 -->
+                <div class="step-card">
+                    <div class="flex items-center mb-2">
+                        <span class="step-number">3</span>
+                        <h4 class="font-bold">টাস্ক সম্পন্ন করুন</h4>
+                    </div>
+                    <p class="text-sm text-gray-700 mb-2">✅ টেলিগ্রাম চ্যানেল জয়েন: <span class="font-bold text-green-600">৫০ টাকা</span></p>
+                    <p class="text-sm text-gray-700 mb-2">✅ ইউটিউব সাবস্ক্রাইব: <span class="font-bold text-green-600">৫০ টাকা</span></p>
+                    <p class="text-sm text-gray-700">📍 <span class="text-orange-600">টাস্ক পেজে</span> গিয়ে সম্পন্ন করুন</p>
+                </div>
+                
+                <!-- Step 4 -->
+                <div class="step-card">
+                    <div class="flex items-center mb-2">
+                        <span class="step-number">4</span>
+                        <h4 class="font-bold">রেফারেল করে আয়</h4>
+                    </div>
+                    <p class="text-sm text-gray-700 mb-2">✅ প্রতিটি রেফারেলে আপনি পাবেন <span class="font-bold text-green-600">১০০ টাকা</span></p>
+                    <p class="text-sm text-gray-700 mb-2">✅ আপনার রেফারেল করা বন্ধু পাবে <span class="font-bold text-green-600">৫০ টাকা</span></p>
+                    <p class="text-sm text-gray-700">📍 আপনার রেফারেল লিঙ্ক কপি করে বন্ধুদের শেয়ার করুন</p>
+                </div>
+                
+                <!-- উত্তোলনের শর্ত -->
+                <div class="warning-box">
+                    <h4 class="font-bold text-yellow-800 mb-2">⚠️ টাকা উত্তোলনের শর্ত</h4>
+                    <ul class="text-sm space-y-1">
+                        <li>✅ ন্যূনতম ব্যালেন্স: <span class="font-bold">৫০০ টাকা</span></li>
+                        <li>✅ ন্যূনতম রেফারেল: <span class="font-bold">১৫ জন</span></li>
+                        <li>✅ ন্যূনতম মোট এড: <span class="font-bold">৫০ টি</span></li>
+                    </ul>
+                </div>
+                
+                <!-- গুরুত্বপূর্ণ টিপস -->
+                <div class="bg-blue-50 rounded-xl p-4 mt-4">
+                    <h4 class="font-bold text-blue-800 mb-2">💡 গুরুত্বপূর্ণ টিপস</h4>
+                    <ul class="text-sm text-blue-700 space-y-1">
+                        <li>• প্রতিদিন নিয়মিত এড দেখুন</li>
+                        <li>• ঘন্টার রিসেটের সময় লক্ষ্য রাখুন</li>
+                        <li>• পপআপ ব্লকার বন্ধ রাখুন</li>
+                        <li>• এড দেখার পর ১০ সেকেন্ড অপেক্ষা করুন</li>
+                        <li>• পেমেন্ট প্রুফ চ্যানেল জয়েন করুন</li>
+                    </ul>
+                </div>
+                
+                <!-- আয়ের হিসাব -->
+                <div class="bg-green-50 rounded-xl p-4 mt-4">
+                    <h4 class="font-bold text-green-800 mb-2">💰 দৈনিক সম্ভাব্য আয়</h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span>এড থেকে (১০টি × ২৪ ঘন্টা × ৩০ টাকা):</span>
+                            <span class="font-bold">৭,২০০ টাকা</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>বোনাস এড থেকে (১০টি × ২৪ ঘন্টা × ১০ টাকা):</span>
+                            <span class="font-bold">২,৪০০ টাকা</span>
+                        </div>
+                        <div class="flex justify-between border-t pt-2">
+                            <span class="font-bold">সর্বোচ্চ দৈনিক আয়:</span>
+                            <span class="font-bold text-green-600">৯,৬০০ টাকা</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">* সব এড দেখলে সর্বোচ্চ আয় সম্ভব</p>
+                </div>
+                
+                <button onclick="closeRulesModal()" class="pumpkin-btn w-full mt-4">🎯 বুঝেছি, কাজ শুরু করি</button>
+            </div>
+        </div>
     </div>
 
     <div class="container mx-auto px-4 py-6">
@@ -26,6 +238,18 @@
                 <p class="text-xs mt-2">স্বাগতম, <span id="userName">ইউজার</span></p>
             </div>
         </div>
+
+        <!-- NEW: কাজ করার নিয়ম বাটন -->
+        <button onclick="openRulesModal()" class="rule-btn mb-6">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-book-open text-2xl"></i>
+                <div>
+                    <p class="text-lg">📖 কাজ করার নিয়ম</p>
+                    <p class="text-sm opacity-90">নতুন ইউজার? এখানে ক্লিক করুন</p>
+                </div>
+            </div>
+            <i class="fas fa-arrow-right text-xl"></i>
+        </button>
 
         <div class="grid grid-cols-2 gap-4 mb-6">
             <div class="pumpkin-card text-center">
@@ -51,7 +275,7 @@
             </div>
         </div>
 
-        <!-- NEW BIG BUTTON: পেমেন্ট প্রুফ চ্যানেল ভিজিট করুন -->
+        <!-- পেমেন্ট প্রুফ চ্যানেল -->
         <a href="https://t.me/mishti_kumra_official" target="_blank" class="block mb-6">
             <div class="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-4 text-center shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]">
                 <div class="flex items-center justify-center gap-3">
@@ -104,6 +328,27 @@
     <script src="app.js"></script>
     
     <script>
+        // Modal Functions
+        function openRulesModal() {
+            document.getElementById('rulesModal').style.display = 'flex';
+            // নতুন ইউজার হলে auto-show করার অপশন
+            localStorage.setItem('rules_seen', 'true');
+        }
+        
+        function closeRulesModal() {
+            document.getElementById('rulesModal').style.display = 'none';
+        }
+        
+        // নতুন ইউজার চেক করে অটো মডাল দেখানো
+        function checkAndShowRulesForNewUser() {
+            const hasSeenRules = localStorage.getItem('rules_seen');
+            if (!hasSeenRules) {
+                setTimeout(() => {
+                    openRulesModal();
+                }, 1500);
+            }
+        }
+
         // Hourly reset functions
         function checkHourlyReset() {
             const currentHour = new Date().getHours();
@@ -154,7 +399,16 @@
             setTimeout(() => {
                 updateHomepageUI();
                 setInterval(updateHomepageUI, 60000);
+                checkAndShowRulesForNewUser();
             }, 1000);
+        });
+        
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('rulesModal');
+            if (event.target === modal) {
+                closeRulesModal();
+            }
         });
     </script>
 </body>

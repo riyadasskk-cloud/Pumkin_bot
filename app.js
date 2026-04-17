@@ -1,4 +1,4 @@
-// app.js - Complete with Hourly Reset and 50 Ads Withdrawal Requirement
+// app.js - Complete with Hourly Reset, 50 Ads Withdrawal Requirement & Push Notifications
 let currentUser = null;
 
 // Get Telegram User ID
@@ -131,6 +131,21 @@ async function processReferral(userId, userName, userFirstName) {
             });
         
         localStorage.setItem(`ref_${userId}`, 'processed');
+        
+        // 🔔 SEND PUSH NOTIFICATION TO REFERRER
+        setTimeout(async () => {
+            try {
+                await sendNotificationToUser(
+                    referrerId, 
+                    'referral_join', 
+                    `🎉 *${userFirstName || 'একজন নতুন ইউজার'}* আপনার রেফারেল লিঙ্ক থেকে জয়েন করেছেন!\n\n💰 আপনি পেয়েছেন *১০০ টাকা* বোনাস!`,
+                    '💰 ব্যালেন্স দেখুন'
+                );
+                console.log('✅ Referral notification sent to:', referrerId);
+            } catch (e) {
+                console.log('Notification send failed (user may not have subscribed):', e);
+            }
+        }, 2000);
         
         setTimeout(() => {
             alert('🎉 রেফারেল সফল! আপনি ৫০ টাকা বোনাস পেয়েছেন!');
@@ -352,12 +367,11 @@ async function addBonus(amount) {
     updateUI();
 }
 
-// Request withdrawal - UPDATED: 50 ads minimum (was 10)
+// Request withdrawal - 50 ads minimum
 async function requestWithdraw(amount, account, method) {
     if (!currentUser) return { success: false, error: 'No user' };
     if (amount > currentUser.balance) return { success: false, error: 'Insufficient balance' };
     if ((currentUser.total_referrals || 0) < 15) return { success: false, error: 'Need 15 referrals' };
-    // UPDATED: 10 ads to 50 ads requirement
     if ((currentUser.total_ads || 0) < 50) return { success: false, error: 'Need 50 total ads' };
     
     // Deduct balance
@@ -432,17 +446,93 @@ function hideLoading() {
     if (loadingOverlay) loadingOverlay.style.display = 'none';
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', async () => {
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-        tg.expand();
-        tg.ready();
+// ============================================
+// 🔔 PUSH NOTIFICATION FUNCTIONS
+// ============================================
+
+// ইউজারের নোটিফিকেশন স্ট্যাটাস চেক
+async function checkNotificationStatus() {
+    const user = await getCurrentUser();
+    if (!user) return false;
+    
+    try {
+        const { data } = await supabase
+            .from('user_chat_ids')
+            .select('notifications_enabled')
+            .eq('user_id', user.id)
+            .single();
+        
+        return data?.notifications_enabled || false;
+    } catch (error) {
+        return false;
     }
-    await loadUser();
-    updateUI();
-    hideLoading();
-});
+}
+
+// নোটিফিকেশন সাবস্ক্রাইব করার লিঙ্ক দেখান
+function showNotificationSubscribePrompt() {
+    const botUsername = window.CONFIG?.BOT_USERNAME || 'mishti_kumra_bot';
+    const botLink = `https://t.me/${botUsername}`;
+    
+    if (confirm('🔔 টেলিগ্রাম নোটিফিকেশন চালু করতে চান?\n\nনতুন এড, বোনাস এবং রেফারেলের খবর সরাসরি টেলিগ্রামে পাবেন!\n\nবটে /start লিখতে হবে।')) {
+        window.open(botLink, '_blank');
+    }
+}
+
+// নোটিফিকেশন পাঠানোর ফাংশন (Internal use)
+async function sendNotificationToUser(userId, type, customMessage, buttonText = null, buttonUrl = null) {
+    try {
+        const response = await fetch('/api/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userId,
+                message: customMessage,
+                type: type,
+                buttonText: buttonText,
+                buttonUrl: buttonUrl || 'https://pumkin-bot-pi.vercel.app'
+            })
+        });
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Send notification error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// সবার জন্য নোটিফিকেশন পাঠান (Admin function)
+async function sendNotificationToAll(type, message, buttonText = null, buttonUrl = null) {
+    try {
+        // Get all subscribed users
+        const { data: users } = await supabase
+            .from('user_chat_ids')
+            .select('user_id')
+            .eq('notifications_enabled', true);
+        
+        if (!users || users.length === 0) {
+            return { success: false, error: 'No subscribed users' };
+        }
+        
+        let successCount = 0;
+        for (const user of users) {
+            const result = await sendNotificationToUser(user.user_id, type, message, buttonText, buttonUrl);
+            if (result.success) successCount++;
+            // Rate limit এড়াতে অপেক্ষা
+            await new Promise(r => setTimeout(r, 50));
+        }
+        
+        return { success: true, sent: successCount, total: users.length };
+    } catch (error) {
+        console.error('Send to all error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// নতুন এড এলে নোটিফিকেশন (সবার জন্য)
+async function notifyNewAdAvailable() {
+    const message = `🎬 *নতুন এড এসেছে!*\n\nএখনই এড দেখে ৩০ টাকা উপার্জন করুন!\n\n⏰ লিমিটেড সময়ের জন্য!`;
+    return await sendNotificationToAll('new_ad', message, '🎬 এড দেখুন');
+}
 
 // Expose functions globally
 window.addEarning = addEarning;
@@ -456,3 +546,20 @@ window.getUserData = getUserData;
 window.updateUI = updateUI;
 window.updateAllPagesUI = updateAllPagesUI;
 window.hideLoading = hideLoading;
+window.checkNotificationStatus = checkNotificationStatus;
+window.showNotificationSubscribePrompt = showNotificationSubscribePrompt;
+window.sendNotificationToUser = sendNotificationToUser;
+window.sendNotificationToAll = sendNotificationToAll;
+window.notifyNewAdAvailable = notifyNewAdAvailable;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', async () => {
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+        tg.expand();
+        tg.ready();
+    }
+    await loadUser();
+    updateUI();
+    hideLoading();
+});

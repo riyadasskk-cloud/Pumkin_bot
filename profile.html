@@ -29,7 +29,28 @@
             <button onclick="copyReferralLink()" class="w-full flex items-center justify-between p-3 border rounded-xl mb-2 hover:bg-gray-50"><span><i class="fas fa-link mr-2 text-purple-500"></i>রেফারেল লিঙ্ক কপি</span><i class="fas fa-copy text-gray-400"></i></button>
             <button onclick="logout()" class="w-full flex items-center justify-between p-3 border rounded-xl text-red-600 hover:bg-red-50"><span><i class="fas fa-sign-out-alt mr-2"></i>লগ আউট</span><i class="fas fa-arrow-right"></i></button>
         </div>
-
+<!-- নোটিফিকেশন সেটিংস -->
+<div class="pumpkin-card mb-6">
+    <h3 class="font-bold mb-4">🔔 নোটিফিকেশন সেটিংস</h3>
+    <div class="space-y-3">
+        <button onclick="showNotificationSubscribePrompt()" 
+                class="w-full flex items-center justify-between p-3 bg-blue-50 rounded-xl">
+            <span><i class="fab fa-telegram mr-2 text-blue-500"></i>টেলিগ্রাম নোটিফিকেশন চালু করুন</span>
+            <i class="fas fa-bell text-blue-500"></i>
+        </button>
+        <p class="text-xs text-gray-500 px-1">নতুন এড, বোনাস ও রেফারেলের নোটিফিকেশন পেতে সাবস্ক্রাইব করুন</p>
+        
+        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+            <p class="text-xs text-gray-600 mb-1">অথবা সরাসরি বটে যান:</p>
+            <a href="https://t.me/mishti_kumra_bot" target="_blank" 
+               class="text-blue-500 text-sm flex items-center gap-2">
+                <i class="fab fa-telegram"></i> @mishti_kumra_bot
+                <i class="fas fa-external-link-alt text-xs"></i>
+            </a>
+            <p class="text-xs text-gray-500 mt-2">বটে /start লিখে নোটিফিকেশন চালু করুন</p>
+        </div>
+    </div>
+</div>
         <div class="pumpkin-card mt-6">
             <h3 class="font-bold mb-3">👥 আপনার রেফারেল লিঙ্ক</h3>
             <div class="bg-gray-100 rounded-lg p-3 break-all"><code class="text-xs" id="profileReferralLink">লোড হচ্ছে...</code></div>

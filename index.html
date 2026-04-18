@@ -314,7 +314,52 @@
             <button onclick="copyReferralLink()" class="mt-3 pumpkin-btn w-full text-sm py-2">📋 কপি লিঙ্ক</button>
         </div>
     </div>
+<!-- নোটিফিকেশন প্রম্পট -->
+<div id="notificationPrompt" style="display:none;" class="fixed bottom-20 left-4 right-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-4 shadow-lg z-50">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-bell text-white text-2xl"></i>
+            <div>
+                <p class="text-white font-bold">🔔 নোটিফিকেশন চালু করুন!</p>
+                <p class="text-white/80 text-sm">নতুন এড ও বোনাসের আপডেট পেতে</p>
+            </div>
+        </div>
+        <button onclick="goToBot()" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold text-sm">
+            চালু করুন
+        </button>
+    </div>
+    <button onclick="closePrompt()" class="absolute top-2 right-2 text-white/60">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
 
+<script>
+function goToBot() {
+    window.open('https://t.me/mishti_kumra_bot', '_blank');
+    closePrompt();
+}
+
+function closePrompt() {
+    document.getElementById('notificationPrompt').style.display = 'none';
+    localStorage.setItem('prompt_closed', 'true');
+}
+
+// চেক করুন ইউজার সাবস্ক্রাইব করেছে কিনা
+async function checkAndShowPrompt() {
+    const isSubscribed = await checkNotificationStatus();
+    const promptClosed = localStorage.getItem('prompt_closed');
+    
+    if (!isSubscribed && !promptClosed) {
+        setTimeout(() => {
+            document.getElementById('notificationPrompt').style.display = 'block';
+        }, 3000);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(checkAndShowPrompt, 2000);
+});
+</script>
     <div class="bottom-nav">
         <a href="index.html" class="nav-item active"><i class="fas fa-home"></i><span>হোম</span></a>
         <a href="tasks.html" class="nav-item"><i class="fas fa-tasks"></i><span>টাস্ক</span></a>

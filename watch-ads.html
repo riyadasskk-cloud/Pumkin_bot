@@ -33,8 +33,8 @@
     <div id="countdownOverlay" class="countdown-overlay">
         <div class="text-center">
             <i class="fas fa-hourglass-half text-white text-5xl mb-4"></i>
-            <div id="countdownNumber" class="countdown-number">10</div>
-            <p class="text-white">এড দেখুন... ১০ সেকেন্ড অপেক্ষা করুন</p>
+            <div id="countdownNumber" class="countdown-number">15</div>
+            <p class="text-white">এড দেখুন... ১৫ সেকেন্ড অপেক্ষা করুন</p>
             <p class="text-gray-400 text-sm mt-2">এড দেখার পর এই পেজে ফিরে আসুন</p>
         </div>
     </div>
@@ -62,7 +62,7 @@
             <button onclick="watchAd()" id="watchBtn" class="pumpkin-btn bg-gradient-to-r from-green-500 to-green-600 w-full py-4 text-lg">
                 🎬 এড দেখুন
             </button>
-            <p class="text-xs text-gray-500 mt-3">⚠️ পপআপ ব্লকার বন্ধ রাখুন | এড দেখার পর ১০ সেকেন্ড অপেক্ষা করুন</p>
+            <p class="text-xs text-gray-500 mt-3">⚠️ পপআপ ব্লকার বন্ধ রাখুন | এড দেখার পর ১৫ সেকেন্ড অপেক্ষা করুন</p>
         </div>
 
         <a href="tasks.html" class="block text-center text-gray-500 mt-6">← টাস্ক পেজে ফিরুন</a>
@@ -198,7 +198,7 @@
             }
             
             document.getElementById('countdownOverlay').style.display = 'flex';
-            let seconds = 10;
+            let seconds = 15;
             const countEl = document.getElementById('countdownNumber');
             countEl.textContent = seconds;
             

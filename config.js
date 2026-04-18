@@ -21,6 +21,7 @@ window.CONFIG = {
         'https://omg10.com/4/10095617',
         'https://omg10.com/4/10095617',
         'https://omg10.com/4/10095617',
+        'https://rivuletlucidly.com/wzvdzr4ka?key=7a422407e8fedbc108da1c1da906f0a9',
         'https://omg10.com/4/10095617',
         'https://rivuletlucidly.com/img7n81xh8?key=60effca0c228e66afd204784027d8b16',
         'https://rivuletlucidly.com/img7n81xh8?key=60effca0c228e66afd204784027d8b16',

@@ -8,8 +8,38 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        .countdown-overlay { 
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.95); display:none; justify-content:center; 
+            align-items:center; flex-direction:column; z-index:1000; 
+        }
+        .countdown-number { font-size:80px; font-weight:bold; color:#FF9800; }
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            z-index: 1001;
+            display: none;
+        }
+    </style>
 </head>
 <body>
+    <div id="countdownOverlay" class="countdown-overlay">
+        <div class="text-center">
+            <i class="fas fa-hourglass-half text-white text-5xl mb-4"></i>
+            <div id="countdownNumber" class="countdown-number">30</div>
+            <p class="text-white">দৈনিক বোনাস এড দেখুন... ৩০ সেকেন্ড অপেক্ষা করুন</p>
+            <p class="text-gray-400 text-sm mt-2">এড দেখার পর এখানে ফিরে আসুন</p>
+        </div>
+    </div>
+    <div id="toast" class="toast"></div>
+
     <div class="container mx-auto px-4 py-6">
         <div class="pumpkin-header mb-6">
             <h1 class="text-2xl font-bold">📋 টাস্ক করুন</h1>
@@ -31,7 +61,7 @@
             <a href="watch-ads.html" class="pumpkin-btn block text-center">🎬 এড দেখুন</a>
         </div>
 
-        <!-- Bonus Ads -->
+        <!-- Bonus Ads (10 taka, hourly) -->
         <div class="pumpkin-card mb-6">
             <div class="flex justify-between items-center mb-3">
                 <div><i class="fas fa-star text-yellow-500 text-2xl mr-2"></i><span class="font-bold">বোনাস এড</span></div>
@@ -44,6 +74,24 @@
             </div>
             <div class="progress-bar mb-4"><div class="progress-fill" id="bonusProgressFill" style="width:0%"></div></div>
             <a href="bonus-ads.html" class="pumpkin-btn bg-gradient-to-r from-yellow-500 to-orange-500 block text-center">⭐ বোনাস এড দেখুন</a>
+        </div>
+
+        <!-- NEW: Daily Bonus Ads (5 taka, daily limit 50, 30 seconds wait) -->
+        <div class="pumpkin-card mb-6" style="background: linear-gradient(135deg, #667eea10, #764ba210); border: 2px solid #764ba2;">
+            <div class="flex justify-between items-center mb-3">
+                <div><i class="fas fa-calendar-day text-purple-500 text-2xl mr-2"></i><span class="font-bold">দৈনিক বোনাস এড</span></div>
+                <span class="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs">৫ টাকা/এড</span>
+            </div>
+            <p class="text-gray-600 text-sm mb-3">প্রতিদিন ৫০টি এড দেখে ২৫০ টাকা পর্যন্ত আয় করুন! (প্রতি এডে ৩০ সেকেন্ড)</p>
+            <div class="flex justify-between text-sm mb-2">
+                <span>আজকে: <span id="dailyBonusAdsCount">0</span>/50</span>
+                <span id="dailyBonusResetTimer" class="text-purple-600 font-semibold">রিসেট: কাল সকাল ৬টায়</span>
+            </div>
+            <div class="progress-bar mb-4"><div class="progress-fill" id="dailyBonusProgressFill" style="width:0%; background: linear-gradient(90deg, #667eea, #764ba2);"></div></div>
+            <button onclick="watchDailyBonusAd()" id="watchDailyBonusBtn" class="pumpkin-btn bg-gradient-to-r from-purple-500 to-pink-500 block text-center w-full">
+                ⭐ দৈনিক বোনাস এড দেখুন
+            </button>
+            <p class="text-xs text-gray-500 mt-2 text-center">⚠️ পপআপ ব্লকার বন্ধ রাখুন | এড দেখার পর ৩০ সেকেন্ড অপেক্ষা করুন</p>
         </div>
 
         <!-- Telegram Task -->
@@ -81,7 +129,199 @@
     
     <script>
         // ============================================
-        // HOURLY RESET FUNCTIONS (Same as watch-ads.html)
+        // DAILY BONUS ADS FUNCTIONS (NEW)
+        // ============================================
+        let dailyCountdownInterval;
+        let dailyAdWindow = null;
+        let dailyAdOpened = false;
+        const DAILY_LIMIT = 50;
+        const DAILY_REWARD = 5;
+        const DAILY_WAIT_SECONDS = 30;
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.textContent = message;
+            toast.style.backgroundColor = isError ? '#dc2626' : '#22c55e';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        function checkDailyReset() {
+            const today = new Date().toDateString();
+            const lastResetDate = localStorage.getItem('last_daily_bonus_reset_date');
+            
+            if (lastResetDate !== today) {
+                console.log('Daily reset triggered for DAILY BONUS ADS!');
+                localStorage.setItem('daily_bonus_ads_watched', '0');
+                localStorage.setItem('last_daily_bonus_reset_date', today);
+                return true;
+            }
+            
+            if (lastResetDate === null) {
+                localStorage.setItem('last_daily_bonus_reset_date', today);
+                localStorage.setItem('daily_bonus_ads_watched', '0');
+            }
+            return false;
+        }
+
+        function getDailyBonusCount() {
+            checkDailyReset();
+            return parseInt(localStorage.getItem('daily_bonus_ads_watched') || '0');
+        }
+
+        function incrementDailyBonusCount() {
+            const current = getDailyBonusCount();
+            const newCount = current + 1;
+            localStorage.setItem('daily_bonus_ads_watched', newCount.toString());
+            return newCount;
+        }
+
+        function getTimeUntilNextDay() {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(now.getDate() + 1);
+            tomorrow.setHours(6, 0, 0, 0);
+            const diffMs = tomorrow - now;
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 0) {
+                return `${hours}ঘ ${minutes}মি`;
+            }
+            return `${minutes} মিনিট`;
+        }
+
+        function updateDailyBonusUI() {
+            const dailyCount = getDailyBonusCount();
+            const dailyCountEl = document.getElementById('dailyBonusAdsCount');
+            const progressFillEl = document.getElementById('dailyBonusProgressFill');
+            const resetTimerEl = document.getElementById('dailyBonusResetTimer');
+            const watchBtn = document.getElementById('watchDailyBonusBtn');
+            
+            if (dailyCountEl) dailyCountEl.textContent = dailyCount;
+            if (progressFillEl) progressFillEl.style.width = `${(dailyCount / DAILY_LIMIT) * 100}%`;
+            if (resetTimerEl) resetTimerEl.textContent = `রিসেট: কাল সকাল ৬টায় (${getTimeUntilNextDay()} বাকি)`;
+            
+            if (watchBtn) {
+                if (dailyCount >= DAILY_LIMIT) {
+                    watchBtn.disabled = true;
+                    watchBtn.innerHTML = '❌ আজকের লিমিট শেষ (৫০/৫০)';
+                    watchBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    watchBtn.disabled = false;
+                    watchBtn.innerHTML = '⭐ দৈনিক বোনাস এড দেখুন';
+                    watchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+        }
+
+        async function watchDailyBonusAd() {
+            const user = await getCurrentUser();
+            if (!user) {
+                alert('ডেটা লোড হয়নি! পেজ রিফ্রেশ করুন।');
+                return;
+            }
+            
+            const dailyCount = getDailyBonusCount();
+            if (dailyCount >= DAILY_LIMIT) {
+                alert(`❌ আজকের লিমিট শেষ! কাল সকাল ৬টায় আবার চেষ্টা করুন।\nআপনি আজ ${dailyCount}/50 টি দৈনিক বোনাস এড দেখেছেন।`);
+                return;
+            }
+            
+            if (dailyAdOpened) {
+                alert('এড ইতিমধ্যে খোলা আছে! দয়া করে আগের এডটি সম্পন্ন করুন।');
+                return;
+            }
+            
+            const watchBtn = document.getElementById('watchDailyBonusBtn');
+            watchBtn.disabled = true;
+            watchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> এড খোলা হচ্ছে...';
+            
+            const randomLink = window.CONFIG.AD_LINKS[Math.floor(Math.random() * window.CONFIG.AD_LINKS.length)];
+            console.log('Opening daily bonus ad:', randomLink);
+            
+            dailyAdWindow = window.open(randomLink, '_blank');
+            dailyAdOpened = true;
+            
+            if (!dailyAdWindow) {
+                alert('পপআপ ব্লকার বন্ধ করুন!');
+                watchBtn.disabled = false;
+                watchBtn.innerHTML = '⭐ দৈনিক বোনাস এড দেখুন';
+                dailyAdOpened = false;
+                return;
+            }
+            
+            const overlay = document.getElementById('countdownOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                let seconds = DAILY_WAIT_SECONDS;
+                const countEl = document.getElementById('countdownNumber');
+                countEl.textContent = seconds;
+                
+                dailyCountdownInterval = setInterval(() => {
+                    seconds--;
+                    countEl.textContent = seconds;
+                    if (seconds <= 0) {
+                        clearInterval(dailyCountdownInterval);
+                        finishDailyBonusAd();
+                    }
+                }, 1000);
+            } else {
+                // If no overlay, just wait 30 seconds
+                setTimeout(() => {
+                    finishDailyBonusAd();
+                }, DAILY_WAIT_SECONDS * 1000);
+            }
+        }
+
+        async function finishDailyBonusAd() {
+            const overlay = document.getElementById('countdownOverlay');
+            if (overlay) overlay.style.display = 'none';
+            
+            // Increment daily count in localStorage
+            const newDailyCount = incrementDailyBonusCount();
+            
+            // Update Supabase - Add 5 taka to balance and total_income
+            const user = await getCurrentUser();
+            const newBalance = (user.balance || 0) + DAILY_REWARD;
+            const newTotalIncome = (user.total_income || 0) + DAILY_REWARD;
+            const newDailyBonusAds = (user.today_bonus_ads_2 || 0) + 1;
+            
+            const { error } = await supabase
+                .from('users')
+                .update({
+                    balance: newBalance,
+                    total_income: newTotalIncome,
+                    today_bonus_ads_2: newDailyBonusAds,
+                    last_active: new Date().toISOString()
+                })
+                .eq('id', user.id);
+            
+            if (error) {
+                console.error('Update error:', error);
+                alert('❌ সমস্যা হয়েছে! আবার চেষ্টা করুন।');
+                localStorage.setItem('daily_bonus_ads_watched', (newDailyCount - 1).toString());
+            } else {
+                await loadUser();
+                showToast(`✅ ${DAILY_REWARD} টাকা যোগ হয়েছে! আজকে ${newDailyCount}/${DAILY_LIMIT}`, false);
+                updateDailyBonusUI();
+                
+                setTimeout(() => {
+                    alert(`✅ ${DAILY_REWARD} টাকা যোগ হয়েছে!\n\nআজকে আপনি ${newDailyCount}/${DAILY_LIMIT} টি দৈনিক বোনাস এড দেখেছেন।\n\nবাকি আছে: ${DAILY_LIMIT - newDailyCount} টি এড (${(DAILY_LIMIT - newDailyCount) * DAILY_REWARD} টাকা সম্ভাব্য আয়)`);
+                }, 500);
+            }
+            
+            const watchBtn = document.getElementById('watchDailyBonusBtn');
+            if (watchBtn) {
+                watchBtn.disabled = false;
+                watchBtn.innerHTML = '⭐ দৈনিক বোনাস এড দেখুন';
+            }
+            dailyAdOpened = false;
+        }
+
+        // ============================================
+        // HOURLY RESET FUNCTIONS
         // ============================================
         
         function checkHourlyReset() {
@@ -152,17 +392,26 @@
             const timeLeft = getTimeUntilNextHour();
             
             // Update main ads section
-            document.getElementById('todayAdsCount').textContent = adsCount;
-            document.getElementById('resetTimer').innerHTML = `রিসেট: ${timeLeft}`;
-            document.getElementById('progressFill').style.width = `${(adsCount / 10) * 100}%`;
+            const todayAdsEl = document.getElementById('todayAdsCount');
+            const resetTimerEl = document.getElementById('resetTimer');
+            const progressFillEl = document.getElementById('progressFill');
+            const headerResetEl = document.getElementById('headerResetTimer');
+            
+            if (todayAdsEl) todayAdsEl.textContent = adsCount;
+            if (resetTimerEl) resetTimerEl.innerHTML = `রিসেট: ${timeLeft}`;
+            if (progressFillEl) progressFillEl.style.width = `${(adsCount / 10) * 100}%`;
             
             // Update bonus ads section
-            document.getElementById('bonusAdsCount').textContent = bonusCount;
-            document.getElementById('bonusResetTimer').innerHTML = `রিসেট: ${timeLeft}`;
-            document.getElementById('bonusProgressFill').style.width = `${(bonusCount / 10) * 100}%`;
+            const bonusAdsEl = document.getElementById('bonusAdsCount');
+            const bonusResetEl = document.getElementById('bonusResetTimer');
+            const bonusProgressEl = document.getElementById('bonusProgressFill');
+            
+            if (bonusAdsEl) bonusAdsEl.textContent = bonusCount;
+            if (bonusResetEl) bonusResetEl.innerHTML = `রিসেট: ${timeLeft}`;
+            if (bonusProgressEl) bonusProgressEl.style.width = `${(bonusCount / 10) * 100}%`;
             
             // Update header
-            document.getElementById('headerResetTimer').innerHTML = `প্রতি ঘন্টায় (পরবর্তী: ${timeLeft})`;
+            if (headerResetEl) headerResetEl.innerHTML = `প্রতি ঘন্টায় (পরবর্তী: ${timeLeft})`;
         }
 
         // Telegram Task
@@ -174,8 +423,11 @@
             window.open('https://t.me/mishti_kumra_official', '_blank');
             await addBonus(50);
             localStorage.setItem('task_telegram', 'done');
-            document.getElementById('telegramBtn').innerHTML = '✅ সম্পন্ন! ৫০ টাকা পেয়েছেন';
-            document.getElementById('telegramBtn').disabled = true;
+            const telegramBtn = document.getElementById('telegramBtn');
+            if (telegramBtn) {
+                telegramBtn.innerHTML = '✅ সম্পন্ন! ৫০ টাকা পেয়েছেন';
+                telegramBtn.disabled = true;
+            }
             alert('🎉 ৫০ টাকা বোনাস আপনার অ্যাকাউন্টে যোগ হয়েছে!');
         }
 
@@ -188,43 +440,39 @@
             window.open('https://youtube.com/@mishtikumra-y8v?si=irct3kz1IOkWZzHZ', '_blank');
             await addBonus(50);
             localStorage.setItem('task_youtube', 'done');
-            document.getElementById('youtubeBtn').innerHTML = '✅ সম্পন্ন! ৫০ টাকা পেয়েছেন';
-            document.getElementById('youtubeBtn').disabled = true;
-            alert('🎉 ৫০ টাকা বোনাস আপনার অ্যাকাউন্টে যোগ হয়েছে!');
-        }
-
-        // Also update from database today_ads (for homepage sync)
-        async function syncFromDatabase() {
-            const user = await getCurrentUser();
-            if (user) {
-                // Don't override hourly count, just update UI if needed
-                const hourlyCount = getHourlyAdsCount();
-                if (hourlyCount !== user.today_ads && user.today_ads > hourlyCount) {
-                    // If database has higher count, sync to localStorage
-                    localStorage.setItem('hourly_ads_watched', user.today_ads.toString());
-                    updateTasksUI();
-                }
+            const youtubeBtn = document.getElementById('youtubeBtn');
+            if (youtubeBtn) {
+                youtubeBtn.innerHTML = '✅ সম্পন্ন! ৫০ টাকা পেয়েছেন';
+                youtubeBtn.disabled = true;
             }
+            alert('🎉 ৫০ টাকা বোনাস আপনার অ্যাকাউন্টে যোগ হয়েছে!');
         }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             updateTasksUI();
-            syncFromDatabase();
+            updateDailyBonusUI();
             
             // Update every minute
             setInterval(() => {
                 updateTasksUI();
+                updateDailyBonusUI();
             }, 60000);
             
             // Check task completion status
             if (localStorage.getItem('task_telegram')) {
-                document.getElementById('telegramBtn').innerHTML = '✅ সম্পন্ন';
-                document.getElementById('telegramBtn').disabled = true;
+                const telegramBtn = document.getElementById('telegramBtn');
+                if (telegramBtn) {
+                    telegramBtn.innerHTML = '✅ সম্পন্ন';
+                    telegramBtn.disabled = true;
+                }
             }
             if (localStorage.getItem('task_youtube')) {
-                document.getElementById('youtubeBtn').innerHTML = '✅ সম্পন্ন';
-                document.getElementById('youtubeBtn').disabled = true;
+                const youtubeBtn = document.getElementById('youtubeBtn');
+                if (youtubeBtn) {
+                    youtubeBtn.innerHTML = '✅ সম্পন্ন';
+                    youtubeBtn.disabled = true;
+                }
             }
         });
     </script>

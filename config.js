@@ -32,6 +32,8 @@ window.CONFIG = {
     REFERRED_BONUS: 50,
     AD_REWARD: 30,
     BONUS_AD_REWARD: 10,
+    DAILY_BONUS_AD_REWARD: 5,
+    DAILY_BONUS_AD_LIMIT: 50,
     
     // Bot Info
     BOT_USERNAME: 'mishti_kumra_bot',

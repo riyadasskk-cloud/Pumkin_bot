@@ -397,12 +397,18 @@ async function addBonus(amount) {
     updateUI();
 }
 
-// Request withdrawal - 50 ads minimum
+// Request withdrawal - 50 ads minimum with USDT support
 async function requestWithdraw(amount, account, method) {
     if (!currentUser) return { success: false, error: 'No user' };
     if (amount > currentUser.balance) return { success: false, error: 'Insufficient balance' };
     if ((currentUser.total_referrals || 0) < 15) return { success: false, error: 'Need 15 referrals' };
     if ((currentUser.total_ads || 0) < 50) return { success: false, error: 'Need 50 total ads' };
+    
+    // Calculate USDT amount if method is usdt
+    let usdtAmount = null;
+    if (method === 'usdt') {
+        usdtAmount = (amount / 125).toFixed(2);
+    }
     
     // Deduct balance
     const newBalance = currentUser.balance - amount;
@@ -413,20 +419,29 @@ async function requestWithdraw(amount, account, method) {
     
     // Create withdrawal request
     const timestamp = Date.now();
+    const withdrawalData = {
+        user_id: currentUser.id,
+        user_name: currentUser.first_name,
+        amount: amount,
+        account_number: account,
+        method: method,
+        status: 'pending',
+        request_date: new Date().toISOString(),
+        timestamp: timestamp,
+        user_ads: currentUser.total_ads,
+        user_referrals: currentUser.total_referrals
+    };
+    
+    // Add USDT specific fields
+    if (method === 'usdt') {
+        withdrawalData.usdt_amount = usdtAmount;
+        withdrawalData.network = 'TRC20';
+        withdrawalData.exchange_rate = 125;
+    }
+    
     const { error } = await supabase
         .from('withdrawals')
-        .insert({
-            user_id: currentUser.id,
-            user_name: currentUser.first_name,
-            amount: amount,
-            account_number: account,
-            method: method,
-            status: 'pending',
-            request_date: new Date().toISOString(),
-            timestamp: timestamp,
-            user_ads: currentUser.total_ads,
-            user_referrals: currentUser.total_referrals
-        });
+        .insert(withdrawalData);
     
     if (!error) {
         currentUser = await loadUser();

@@ -7,8 +7,6 @@ window.CONFIG = {
     // Ad Links
     AD_LINKS: [
         'https://rivuletlucidly.com/img7n81xh8?key=60effca0c228e66afd204784027d8b16',
-        'https://otieu.com/4/9809044',
-        'https://otieu.com/4/10095617',
         'https://techbazar55.netlify.app/',
         'https://otieu.com/4/9345167',
         'https://omg10.com/4/10095617',

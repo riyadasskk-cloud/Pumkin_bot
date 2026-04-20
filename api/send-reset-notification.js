@@ -6,16 +6,26 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUz
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     
-    // সহজ পাসওয়ার্ড প্রোটেকশন
     const { password } = req.query;
     if (password !== 'admin123') {
         return res.status(401).json({ error: 'Unauthorized' });
     }
     
+    // 🔥 সাথে সাথে রেসপন্স পাঠিয়ে দিন (টাইমআউট এড়াতে)
+    res.status(200).json({ 
+        success: true, 
+        message: 'Notification process started in background' 
+    });
+    
+    // 📨 ব্যাকগ্রাউন্ডে নোটিফিকেশন পাঠান
+    sendNotificationsInBackground();
+}
+
+async function sendNotificationsInBackground() {
     try {
-        // Get all subscribed users
+        // শুধুমাত্র প্রথম ৫০ জন ইউজার নিন (টাইম লিমিটের জন্য)
         const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/user_chat_ids?select=chat_id,first_name&notifications_enabled=eq.true&new_ad_notify=eq.true`,
+            `${SUPABASE_URL}/rest/v1/user_chat_ids?select=chat_id,first_name&notifications_enabled=eq.true&new_ad_notify=eq.true&limit=50`,
             {
                 headers: {
                     'apikey': SUPABASE_SERVICE_KEY,
@@ -50,19 +60,16 @@ export default async function handler(req, res) {
                     })
                 });
                 sentCount++;
-                await new Promise(r => setTimeout(r, 50)); // Rate limit
+                // কম অপেক্ষা করুন (30ms)
+                await new Promise(r => setTimeout(r, 30));
             } catch (e) {
-                console.error(`Failed: ${user.chat_id}`, e);
+                console.error(`Failed: ${user.chat_id}`);
             }
         }
         
-        return res.status(200).json({ 
-            success: true, 
-            sent: sentCount,
-            total: users.length 
-        });
+        console.log(`✅ Sent to ${sentCount}/${users.length} users`);
         
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        console.error('Background process error:', error);
     }
 }

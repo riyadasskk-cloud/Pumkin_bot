@@ -18,8 +18,6 @@ window.CONFIG = {
         'https://shingledirt.com/img7n81xh8?key=60effca0c228e66afd204784027d8b16',
         'https://omg10.com/4/10095617',
         'https://omg10.com/4/10095617',
-        'https://wwp.giriutan.com/redirect-zone/d37be84c',
-        'https://wwp.giriutan.com/redirect-zone/d37be84c',
         'https://omg10.com/4/10095617',
         'https://shingledirt.com/img7n81xh8?key=60effca0c228e66afd204784027d8b16',
         'https://omg10.com/4/10095617',
@@ -27,7 +25,11 @@ window.CONFIG = {
         'https://shingledirt.com/img7n81xh8?key=60effca0c228e66afd204784027d8b16',
         'https://shingledirt.com/img7n81xh8?key=60effca0c228e66afd204784027d8b16',
         'https://wwp.giriutan.com/redirect-zone/d37be84c',
-        'https://wwp.giriutan.com/redirect-zone/d37be84c'
+        'https://wwp.giriutan.com/redirect-zone/d37be84c',
+        'https://omg10.com/4/9475514',
+        'https://omg10.com/4/9475514',
+        'https://omg10.com/4/9475514',
+        'https://omg10.com/4/9475514'
     ],
     
     // App Settings
